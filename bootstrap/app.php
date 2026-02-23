@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.jwt' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
             'jwt.refresh' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\RefreshToken::class,
             'jwt.auth' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
+            'role.admin'  => \App\Http\Middleware\IsAdmin::class,
+            'role.runner' => \App\Http\Middleware\IsRunner::class,
+            'role.user'   => \App\Http\Middleware\IsUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
