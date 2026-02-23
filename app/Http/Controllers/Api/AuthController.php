@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+use App\Models\Runner;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponseTraits;
 use App\Http\Controllers\Controller;
@@ -31,8 +32,12 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string|min:8',
-            'role' => 'required|in:admin,user,runner'
-        ]);
+            'role' => 'required|in:admin,user,runner',
+            'runner_category' => 'required_if:role,runner|in:food_delivery,ferry_drops',
+            'phone' => 'required_if:role,runner|string|max:15',
+            'location' => 'required_if:role,runner|string|max:255',
+            'runner_type' => 'required_if:role,runner|in:registered,assigned',
+        ]); 
 
         $matchPassword = $data['password'] === $data['password_confirmation'];
         if (! $matchPassword) {
@@ -45,8 +50,18 @@ class AuthController extends Controller
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->password = Hash::make($data['password']);
+        $user->contact_number = $data['phone'];
+        $user->address = $data['location'];
         $user->role = $data['role'];
         $user->save();
+
+        if ($data['role'] == 'runner') {
+            $runner = new Runner();
+            $runner->user_id = $user->id;
+            $runner->type = $data['runner_type'];
+            $runner->category = $data['runner_category'];
+            $runner->save();
+        }
 
         //verify email by sending otp (service)
         $this->verificationService->sendOtp($user);
