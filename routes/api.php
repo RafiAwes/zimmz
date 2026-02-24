@@ -1,10 +1,13 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\IslandController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\FerryController;
+use App\Http\Controllers\Api\IslandController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RestaurantController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -29,6 +32,39 @@ Route::group(['controller' => ProfileController::class, 'prefix' => 'profile', '
 Route::group(['controller' => IslandController::class, 'prefix' => 'island', 'middleware' => 'auth:api'], function () {
     Route::post('/create', 'create')->middleware('role.admin');
     Route::get('/get-all', 'getAll');
+    Route::put('/update/{id}', 'update')->middleware('role.admin');
+    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
+    Route::get('/details/{id}', 'details');
+});
+
+Route::group(['controller' => FerryController::class, 'prefix' => 'ferry', 'middleware' => 'auth:api'], function () {
+    Route::post('/create', 'create')->middleware('role.admin');
+    Route::get('/get-all', 'getAll');
+    Route::put('/update/{id}', 'update')->middleware('role.admin');
+    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
+    Route::get('/details/{id}', 'details');
+});
+
+Route::group(['controller' => RestaurantController::class, 'prefix' => 'restaurant', 'middleware' => 'auth:api'], function () {
+    Route::post('/create', 'create')->middleware('role.admin');
+    Route::get('/get-all', 'getAll');
+    Route::get('/details/{id}', 'details');
+    Route::put('/update/{id}', 'update')->middleware('role.admin');
+    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
+});
+
+Route::group(['controller' => RestaurantController::class, 'prefix' => 'restaurant', 'middleware' => 'auth:api'], function () {
+    Route::post('/create', 'create')->middleware('role.admin');
+    Route::get('/get-all', 'getAll');
+    Route::get('/details/{id}', 'details');
+    Route::put('/update/{id}', 'update')->middleware('role.admin');
+    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
+});
+
+Route::group(['controller' => AdController::class, 'prefix' => 'ad', 'middleware' => 'auth:api'], function () {
+    Route::post('/create', 'create')->middleware('role.admin');
+    Route::get('/get-all', 'getAll');
+    Route::get('/details/{id}', 'details');
     Route::put('/update/{id}', 'update')->middleware('role.admin');
     Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
 });
