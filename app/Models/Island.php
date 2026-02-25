@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Island extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'name',
     ];
@@ -15,5 +16,10 @@ class Island extends Model
     public function ferries()
     {
         return $this->hasMany(Ferry::class);
+    }
+
+    public function ferryDrops()
+    {
+        return $this->hasMany(FerryDrop::class);
     }
 }

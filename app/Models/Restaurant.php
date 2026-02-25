@@ -15,4 +15,9 @@ class Restaurant extends Model
         'lat',
         'long',
     ];
+
+    public function foodDeliveries()
+    {
+        return $this->hasMany(FoodDelivery::class);
+    }
 }

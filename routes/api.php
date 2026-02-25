@@ -1,13 +1,14 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FerryController;
 use App\Http\Controllers\Api\IslandController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -67,4 +68,12 @@ Route::group(['controller' => AdController::class, 'prefix' => 'ad', 'middleware
     Route::get('/details/{id}', 'details');
     Route::put('/update/{id}', 'update')->middleware('role.admin');
     Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
+});
+
+Route::group(['controller' => OrderController::class, 'prefix' => 'order', 'middleware' => 'auth:api'], function () {
+    Route::post('/create', 'create');
+    Route::get('/get-all', 'getAll');
+    Route::get('/details/{id}', 'details');
+    Route::put('/update/{id}', 'update');
+    Route::delete('/delete/{id}', 'delete');
 });

@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('orders', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('name')->nullable();
+            $table->enum('status', ['new', 'pending', 'completed'])->default('new');
+            $table->text('details')->nullable();
+            $table->string('time')->nullable();
+            $table->decimal('total_cost', 10, 2)->default(0);
+            $table->string('drop_location')->nullable();
+            $table->enum('type', ['food_delivery', 'ferry_drops']);
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('orders');
+    }
+};
