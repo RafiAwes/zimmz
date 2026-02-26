@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FerryController;
 use App\Http\Controllers\Api\IslandController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
@@ -76,4 +77,10 @@ Route::group(['controller' => OrderController::class, 'prefix' => 'order', 'midd
     Route::get('/details/{id}', 'details');
     Route::put('/update/{id}', 'update');
     Route::delete('/delete/{id}', 'delete');
+});
+
+Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 'middleware' => 'auth:api'], function () {
+   Route::post('send', 'sendMessage');
+   Route::get('get-messages/{userId}', 'getMessages');
+   Route::put('read/{senderId}', 'markAsRead');
 });

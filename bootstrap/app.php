@@ -9,6 +9,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -16,9 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.jwt' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
             'jwt.refresh' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\RefreshToken::class,
             'jwt.auth' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
-            'role.admin'  => \App\Http\Middleware\IsAdmin::class,
+            'role.admin' => \App\Http\Middleware\IsAdmin::class,
             'role.runner' => \App\Http\Middleware\IsRunner::class,
-            'role.user'   => \App\Http\Middleware\IsUser::class,
+            'role.user' => \App\Http\Middleware\IsUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
