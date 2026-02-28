@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="C:\Projects\Laravel\zimmz\phpunit.xml" tests="9" assertions="27" errors="0" failures="3" skipped="0" time="0.592952">
+    <testsuite name="Feature" tests="9" assertions="27" errors="0" failures="3" skipped="0" time="0.592952">
+      <testsuite name="Tests\Feature\OrderApiTest" file="tests\Feature\OrderApiTest.php" tests="9" assertions="27" errors="0" failures="3" skipped="0" time="0.592952">
+        <testcase name="can list all statuses when status is null" file="tests\Feature\OrderApiTest.php::can list all statuses when status is null" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="3" time="0.338334">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">can list all statuses when status is nullUnable to find JSON fragment: &#13;
+&#13;
+[{"1":"pending"}]&#13;
+&#13;
+within&#13;
+&#13;
+[{"data":{"current_page":1,"data":[{"created_at":"2026-02-28T03:54:56.000000Z","details":"Architecto quae error numquam aut sit recusandae.","drop_location":"28114 Bernita Well\nAugustville, AK 13962-7639","ferry_drop":null,"files":[],"food_delivery":null,"id":1,"name":"Dr. Mylene Tromp","status":"new","time":"21:42:05","total_cost":476.21,"type":"food_delivery","updated_at":"2026-02-28T03:54:56.000000Z","user":{"address":null,"avatar":"http:\/\/localhost:8000\/images\/user\/default.jpg","ban_expires_at":null,"ban_reason":null,"ban_type":null,"contact_number":null,"created_at":"2026-02-28T03:54:56.000000Z","email":"cfunk@example.com","email_verified_at":"2026-02-28T03:54:56.000000Z","gender":null,"google_id":null,"id":2,"is_active":1,"name":"Oren Jakubowski I","otp":null,"otp_expires_at":null,"role":"user","stripe_customer_id":null,"updated_at":"2026-02-28T03:54:56.000000Z"},"user_id":2},{"created_at":"2026-02-28T03:54:56.000000Z","details":"Non labore repudiandae libero.","drop_location":"2263 Dayne Manor\nJerdehaven, WI 21435-9181","ferry_drop":null,"files":[],"food_delivery":null,"id":2,"name":"Ellen Cronin","status":"pending","time":"16:32:33","total_cost":275.62,"type":"food_delivery","updated_at":"2026-02-28T03:54:56.000000Z","user":{"address":null,"avatar":"http:\/\/localhost:8000\/images\/user\/default.jpg","ban_expires_at":null,"ban_reason":null,"ban_type":null,"contact_number":null,"created_at":"2026-02-28T03:54:56.000000Z","email":"raynor.emilia@example.org","email_verified_at":"2026-02-28T03:54:56.000000Z","gender":null,"google_id":null,"id":3,"is_active":1,"name":"Velma Toy","otp":null,"otp_expires_at":null,"role":"user","stripe_customer_id":null,"updated_at":"2026-02-28T03:54:56.000000Z"},"user_id":3}],"first_page_url":"http:\/\/localhost:8000\/api\/order\/get-all?page=1","from":1,"last_page":1,"last_page_url":"http:\/\/localhost:8000\/api\/order\/get-all?page=1","links":[{"active":false,"label":"&amp;laquo; Previous","page":null,"url":null},{"active":false,"label":"Next &amp;raquo;","page":null,"url":null},{"active":true,"label":"1","page":1,"url":"http:\/\/localhost:8000\/api\/order\/get-all?page=1"}],"next_page_url":null,"path":"http:\/\/localhost:8000\/api\/order\/get-all","per_page":10,"prev_page_url":null,"to":2,"total":2},"message":"Orders fetched successfully.","status":"success","success":true}].
+Failed asserting that false is true.&#13;
+at vendor\laravel\framework\src\Illuminate\Testing\AssertableJsonString.php:144
+at vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:947
+at tests\Feature\OrderApiTest.php:24</failure>
+        </testcase>
+        <testcase name="can list orders filtered by status" file="tests\Feature\OrderApiTest.php::can list orders filtered by status" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="2" time="0.023961"/>
+        <testcase name="can create food delivery order" file="tests\Feature\OrderApiTest.php::can create food delivery order" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="4" time="0.029019"/>
+        <testcase name="can create ferry drop order" file="tests\Feature\OrderApiTest.php::can create ferry drop order" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="4" time="0.023925"/>
+        <testcase name="can update an order" file="tests\Feature\OrderApiTest.php::can update an order" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="4" time="0.026660"/>
+        <testcase name="can delete an order" file="tests\Feature\OrderApiTest.php::can delete an order" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="2" time="0.021257"/>
+        <testcase name="can show order details" file="tests\Feature\OrderApiTest.php::can show order details" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="2" time="0.019570"/>
+        <testcase name="can create order with files" file="tests\Feature\OrderApiTest.php::can create order with files" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="3" time="0.061638">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">can create order with filesUnable to find a file or directory at path [/storage/orders/26pYzR7zhrvppmuJQMWDhL2ba3SPLuoDm1tlJRkG.jpg].
+Failed asserting that false is true.&#13;
+at vendor\laravel\framework\src\Illuminate\Filesystem\FilesystemAdapter.php:135
+at tests\Feature\OrderApiTest.php:152</failure>
+        </testcase>
+        <testcase name="can update order with more files" file="tests\Feature\OrderApiTest.php::can update order with more files" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="3" time="0.048588">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">can update order with more filesFailed asserting that an array contains 'http://localhost:8000/storage/orders/old.jpg'.&#13;
+at tests\Feature\OrderApiTest.php:173</failure>
+        </testcase>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             IslandSeeder::class,
             FerrySeeder::class,
             RestaurantSeeder::class,
+            PageSeeder::class,
+            FaqSeeder::class,
         ]);
 
         // 2. Specific Users
@@ -56,8 +58,22 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // 3. Seed some orders and deliveries
+        // 3. Seed some ads and messages
+        \App\Models\Ad::factory(5)->create();
+
         $users = User::where('role', 'user')->get();
+        $runners = User::where('role', 'runner')->get();
+        $allUsers = User::all();
+
+        foreach ($allUsers as $sender) {
+            $receiver = $allUsers->where('id', '!=', $sender->id)->random();
+            \App\Models\Message::factory(2)->create([
+                'sender_id' => $sender->id,
+                'receiver_id' => $receiver->id,
+            ]);
+        }
+
+        // 4. Seed some orders and task services
         $restaurants = \App\Models\Restaurant::all();
         $ferries = \App\Models\Ferry::all();
         $islands = \App\Models\Island::all();
@@ -82,6 +98,19 @@ class DatabaseSeeder extends Seeder
                 'order_id' => $order2->id,
                 'ferry_id' => $ferries->random()->id,
                 'island_id' => $islands->random()->id,
+            ]);
+
+            // Task Services
+            \App\Models\TaskService::factory()->count(2)->create([
+                'user_id' => $user->id,
+                'status' => 'new',
+            ]);
+
+            // Create some accepted/pending tasks
+            \App\Models\TaskService::factory()->create([
+                'user_id' => $user->id,
+                'runner_id' => $runners->random()->id,
+                'status' => 'pending',
             ]);
         }
     }

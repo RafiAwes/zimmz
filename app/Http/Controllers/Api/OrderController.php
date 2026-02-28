@@ -24,17 +24,17 @@ class OrderController extends Controller
         $per_page = $request->input('per_page', 10);
 
         if (is_null($status)) {
-           $orders = Order::query()
-            ->with(['user', 'foodDelivery', 'ferryDrop'])
-            ->latest()
-            ->paginate($per_page);  
+            $orders = Order::query()
+                ->with(['user', 'foodDelivery', 'ferryDrop'])
+                ->latest()
+                ->paginate($per_page);
+        } else {
+            $orders = Order::query()
+                ->with(['user', 'foodDelivery', 'ferryDrop'])
+                ->where('status', $status)
+                ->latest()
+                ->paginate($per_page);
         }
-
-        $orders = Order::query()
-            ->with(['user', 'foodDelivery', 'ferryDrop'])
-            ->where('status', $status)
-            ->latest()
-            ->paginate($per_page);
 
         return $this->successResponse($orders, 'Orders fetched successfully.', 200);
     }
@@ -51,6 +51,7 @@ class OrderController extends Controller
                 'total_cost' => $request->total_cost,
                 'drop_location' => $request->drop_location,
                 'type' => $request->type,
+                'files' => $this->handleFileUploads($request),
             ]);
 
             if ($request->type === 'food_delivery') {
@@ -61,7 +62,6 @@ class OrderController extends Controller
                     'special_instructions' => $request->special_instructions,
                     'ready_now' => $request->ready_now ?? false,
                     'minutes_until_ready' => $request->minutes_until_ready,
-                    'files' => $request->input('files'),
                     'delivery_fee' => $request->delivery_fee,
                     'service_fee' => $request->service_fee,
                 ]);
@@ -102,13 +102,18 @@ class OrderController extends Controller
                 'drop_location',
             ]));
 
+            if ($request->hasFile('files')) {
+                $existingFiles = $order->files ?? [];
+                $newFiles = $this->handleFileUploads($request);
+                $order->update(['files' => array_merge($existingFiles, $newFiles)]);
+            }
+
             if ($order->type === 'food_delivery') {
                 $order->foodDelivery()->update($request->only([
                     'food_cost',
                     'special_instructions',
                     'ready_now',
                     'minutes_until_ready',
-                    'files',
                     'delivery_fee',
                     'service_fee',
                 ]));
@@ -132,5 +137,19 @@ class OrderController extends Controller
         $order->delete();
 
         return $this->successResponse(null, 'Order deleted successfully.', 200);
+    }
+
+    protected function handleFileUploads(Request $request): array
+    {
+        $filePaths = [];
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('orders', 'public');
+                $filePaths[] = $path;
+            }
+        }
+
+        return $filePaths;
     }
 }

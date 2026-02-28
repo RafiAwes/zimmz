@@ -31,7 +31,8 @@ class StoreOrderRequest extends FormRequest
             'special_instructions' => 'nullable|string',
             'ready_now' => 'nullable|boolean',
             'minutes_until_ready' => 'nullable|integer',
-            'files' => 'nullable|string',
+            'files' => 'nullable|array',
+            'files.*' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg,webp,pdf,doc,docx|max:10240',
             'delivery_fee' => 'required_if:type,food_delivery|numeric',
             'service_fee' => 'required_if:type,food_delivery|numeric',
 

@@ -16,7 +16,6 @@ class FoodDelivery extends Model
         'special_instructions',
         'ready_now',
         'minutes_until_ready',
-        'files',
         'delivery_fee',
         'service_fee',
     ];

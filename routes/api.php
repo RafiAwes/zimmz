@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\GeneralController;
 use App\Http\Controllers\Api\IslandController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
 use Illuminate\Http\Request;
@@ -91,6 +92,18 @@ Route::group(['controller' => OrderController::class, 'prefix' => 'order', 'midd
     Route::get('/details/{id}', 'details');
     Route::put('/update/{id}', 'update');
     Route::delete('/delete/{id}', 'delete');
+});
+
+Route::group(['controller' => TaskController::class, 'prefix' => 'task-service', 'middleware' => 'auth:api'], function () {
+    Route::get('/', 'getAll');
+    Route::get('/my-tasks', 'getMyTasks');
+    Route::get('/details/{id}', 'details');
+    Route::post('/create', 'create');
+    Route::put('/update/{id}', 'update');
+    Route::delete('/delete/{id}', 'delete');
+    Route::post('/accept/{id}', 'runnerAcceptTask');
+    Route::post('/reject/{id}', 'runnerRejectTask');
+    Route::post('/complete/{id}', 'runnerCompleteTask');
 });
 
 Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 'middleware' => 'auth:api'], function () {

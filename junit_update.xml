@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="C:\Projects\Laravel\zimmz\phpunit.xml" tests="1" assertions="1" errors="0" failures="1" skipped="0" time="0.357185">
+    <testsuite name="Feature" tests="1" assertions="1" errors="0" failures="1" skipped="0" time="0.357185">
+      <testsuite name="Tests\Feature\OrderApiTest" file="tests\Feature\OrderApiTest.php" tests="1" assertions="1" errors="0" failures="1" skipped="0" time="0.357185">
+        <testcase name="can update order with more files" file="tests\Feature\OrderApiTest.php::can update order with more files" class="Tests\Feature\OrderApiTest" classname="Tests.Feature.OrderApiTest" assertions="1" time="0.357185">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">can update order with more filesExpected response status code [200] but received 500.
+Failed asserting that 500 is identical to 200.&#13;
+&#13;
+The following exception occurred during the last request:
+
+TypeError: App\Models\Order::{closure:App\Models\Order::files():36}(): Argument #1 ($value) must be of type ?array, string given in C:\Projects\Laravel\zimmz\app\Models\Order.php:36
+Stack trace:
+#0 [internal function]: App\Models\Order-&gt;{closure:App\Models\Order::files():36}('["orders\\/old.j...', Array)
+#1 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Concerns\HasAttributes.php(737): call_user_func(Object(Closure), '["orders\\/old.j...', Array)
+#2 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Concerns\HasAttributes.php(2389): Illuminate\Database\Eloquent\Model-&gt;mutateAttributeMarkedAttribute('files', '["orders\\/old.j...')
+#3 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Concerns\HasAttributes.php(529): Illuminate\Database\Eloquent\Model-&gt;transformModelValue('files', '["orders\\/old.j...')
+#4 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Concerns\HasAttributes.php(483): Illuminate\Database\Eloquent\Model-&gt;getAttributeValue('files')
+#5 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(2451): Illuminate\Database\Eloquent\Model-&gt;getAttribute('files')
+#6 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(2504): Illuminate\Database\Eloquent\Model-&gt;offsetExists('files')
+#7 C:\Projects\Laravel\zimmz\app\Http\Controllers\Api\OrderController.php(107): Illuminate\Database\Eloquent\Model-&gt;__isset('files')
+#8 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\Concerns\ManagesTransactions.php(35): App\Http\Controllers\Api\OrderController-&gt;{closure:App\Http\Controllers\Api\OrderController::update():96}(Object(Illuminate\Database\SQLiteConnection))
+#9 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Database\DatabaseManager.php(491): Illuminate\Database\Connection-&gt;transaction(Object(Closure))
+#10 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Support\Facades\Facade.php(363): Illuminate\Database\DatabaseManager-&gt;__call('transaction', Array)
+#11 C:\Projects\Laravel\zimmz\app\Http\Controllers\Api\OrderController.php(96): Illuminate\Support\Facades\Facade::__callStatic('transaction', Array)
+#12 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\ControllerDispatcher.php(46): App\Http\Controllers\Api\OrderController-&gt;update(Object(App\Http\Requests\Api\Order\UpdateOrderRequest), '1')
+#13 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Route.php(265): Illuminate\Routing\ControllerDispatcher-&gt;dispatch(Object(Illuminate\Routing\Route), Object(App\Http\Controllers\Api\OrderController), 'update')
+#14 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Route.php(211): Illuminate\Routing\Route-&gt;runController()
+#15 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Router.php(822): Illuminate\Routing\Route-&gt;run()
+#16 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Routing\Router-&gt;{closure:Illuminate\Routing\Router::runRouteWithinStack():821}(Object(Illuminate\Http\Request))
+#17 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Middleware\SubstituteBindings.php(50): Illuminate\Pipeline\Pipeline-&gt;{closure:Illuminate\Pipeline\Pipeline::prepareDestination():178}(Object(Illuminate\Http\Request))
+#18 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#19 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Auth\Middleware\Authenticate.php(63): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#20 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate-&gt;handle(Object(Illuminate\Http\Request), Object(Closure), 'api')
+#21 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#22 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Router.php(821): Illuminate\Pipeline\Pipeline-&gt;then(Object(Closure))
+#23 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Router.php(800): Illuminate\Routing\Router-&gt;runRouteWithinStack(Object(Illuminate\Routing\Route), Object(Illuminate\Http\Request))
+#24 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Router.php(764): Illuminate\Routing\Router-&gt;runRoute(Object(Illuminate\Http\Request), Object(Illuminate\Routing\Route))
+#25 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Routing\Router.php(753): Illuminate\Routing\Router-&gt;dispatchToRoute(Object(Illuminate\Http\Request))
+#26 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(200): Illuminate\Routing\Router-&gt;dispatch(Object(Illuminate\Http\Request))
+#27 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Foundation\Http\Kernel-&gt;{closure:Illuminate\Foundation\Http\Kernel::dispatchToRouter():197}(Object(Illuminate\Http\Request))
+#28 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline-&gt;{closure:Illuminate\Pipeline\Pipeline::prepareDestination():178}(Object(Illuminate\Http\Request))
+#29 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#30 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#31 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#32 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#33 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#34 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#35 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#36 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#37 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#38 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Http\Middleware\HandleCors.php(74): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#39 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\HandleCors-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#40 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Http\Middleware\TrustProxies.php(58): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#41 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#42 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#43 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#44 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePathEncoding.php(26): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#45 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding-&gt;handle(Object(Illuminate\Http\Request), Object(Closure))
+#46 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline-&gt;{closure:{closure:Illuminate\Pipeline\Pipeline::carry():194}:195}(Object(Illuminate\Http\Request))
+#47 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(175): Illuminate\Pipeline\Pipeline-&gt;then(Object(Closure))
+#48 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(144): Illuminate\Foundation\Http\Kernel-&gt;sendRequestThroughRouter(Object(Illuminate\Http\Request))
+#49 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel-&gt;handle(Object(Illuminate\Http\Request))
+#50 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase-&gt;call('PUT', '/api/order/upda...', Array, Array, Array, Array, '{"files":[]}')
+#51 C:\Projects\Laravel\zimmz\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(441): Illuminate\Foundation\Testing\TestCase-&gt;json('PUT', '/api/order/upda...', Array, Array, 0)
+#52 C:\Projects\Laravel\zimmz\tests\Feature\OrderApiTest.php(167): Illuminate\Foundation\Testing\TestCase-&gt;putJson('/api/order/upda...', Array)
+#53 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Factories\TestCaseMethodFactory.php(168): P\Tests\Feature\OrderApiTest-&gt;{closure:C:\Projects\Laravel\zimmz\tests\Feature\OrderApiTest.php:156}()
+#54 [internal function]: P\Tests\Feature\OrderApiTest-&gt;{closure:Pest\Factories\TestCaseMethodFactory::getClosure():158}()
+#55 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Concerns\Testable.php(429): call_user_func_array(Object(Closure), Array)
+#56 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Support\ExceptionTrace.php(26): P\Tests\Feature\OrderApiTest-&gt;{closure:Pest\Concerns\Testable::__callClosure():429}()
+#57 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Concerns\Testable.php(429): Pest\Support\ExceptionTrace::ensure(Object(Closure))
+#58 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Concerns\Testable.php(331): P\Tests\Feature\OrderApiTest-&gt;__callClosure(Object(Closure), Array)
+#59 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Factories\TestCaseFactory.php(169) : eval()'d code(89): P\Tests\Feature\OrderApiTest-&gt;__runTest(Object(Closure))
+#60 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestCase.php(1332): P\Tests\Feature\OrderApiTest-&gt;__pest_evaluable_can_update_order_with_more_files()
+#61 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestCase.php(519): PHPUnit\Framework\TestCase-&gt;runTest()
+#62 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestRunner\TestRunner.php(99): PHPUnit\Framework\TestCase-&gt;runBare()
+#63 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestCase.php(359): PHPUnit\Framework\TestRunner-&gt;run(Object(P\Tests\Feature\OrderApiTest))
+#64 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestSuite.php(374): PHPUnit\Framework\TestCase-&gt;run()
+#65 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestSuite.php(374): PHPUnit\Framework\TestSuite-&gt;run()
+#66 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\Framework\TestSuite.php(374): PHPUnit\Framework\TestSuite-&gt;run()
+#67 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\TextUI\TestRunner.php(64): PHPUnit\Framework\TestSuite-&gt;run()
+#68 C:\Projects\Laravel\zimmz\vendor\phpunit\phpunit\src\TextUI\Application.php(229): PHPUnit\TextUI\TestRunner-&gt;run(Object(PHPUnit\TextUI\Configuration\Configuration), Object(PHPUnit\Runner\ResultCache\DefaultResultCache), Object(PHPUnit\Framework\TestSuite))
+#69 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\src\Kernel.php(103): PHPUnit\TextUI\Application-&gt;run(Array)
+#70 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\bin\pest(184): Pest\Kernel-&gt;handle(Array, Array)
+#71 C:\Projects\Laravel\zimmz\vendor\pestphp\pest\bin\pest(192): {closure:C:\Projects\Laravel\zimmz\vendor\pestphp\pest\bin\pest:18}()
+#72 {main}
+
+----------------------------------------------------------------------------------
+
+App\Models\Order::{closure:App\Models\Order::files():36}(): Argument #1 ($value) must be of type ?array, string given&#13;
+&#13;
+at vendor\laravel\framework\src\Illuminate\Testing\TestResponseAssert.php:45
+at vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:174
+at tests\Feature\OrderApiTest.php:171</failure>
+        </testcase>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

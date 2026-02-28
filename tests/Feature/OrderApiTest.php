@@ -5,9 +5,9 @@ use App\Models\Island;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(RefreshDatabase::class);
+
+
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => 'user']);
@@ -21,8 +21,10 @@ test('can list all statuses when status is null', function () {
 
     $response = $this->getJson('/api/order/get-all');
 
-    $response->assertStatus(200)
-        ->assertJsonFragment(['new', 'pending']);
+    $response->assertStatus(200);
+    $statuses = collect($response->json('data.data'))->pluck('status');
+    $this->assertTrue($statuses->contains('new'));
+    $this->assertTrue($statuses->contains('pending'));
 });
 
 test('can list orders filtered by status', function () {
@@ -122,4 +124,55 @@ test('can show order details', function () {
 
     $response->assertStatus(200)
         ->assertJsonPath('data.id', $order->id);
+});
+
+test('can create order with files', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+
+    $restaurant = Restaurant::factory()->create();
+    $file1 = \Illuminate\Http\UploadedFile::fake()->image('order1.jpg');
+    $file2 = \Illuminate\Http\UploadedFile::fake()->create('doc1.pdf', 100);
+
+    $payload = [
+        'name' => 'File Order',
+        'total_cost' => 50.00,
+        'drop_location' => '123 Beach Rd',
+        'type' => 'food_delivery',
+        'restaurant_id' => $restaurant->id,
+        'food_cost' => 40.00,
+        'delivery_fee' => 5.00,
+        'service_fee' => 5.00,
+        'files' => [$file1, $file2],
+    ];
+
+    $response = $this->postJson('/api/order/create', $payload);
+
+    $response->assertStatus(201);
+    $this->assertCount(2, $response->json('data.files'));
+
+    foreach ($response->json('data.files') as $fileUrl) {
+        $urlPath = parse_url($fileUrl, PHP_URL_PATH);
+        $path = str_replace('/storage/', '', $urlPath);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($path);
+    }
+});
+
+test('can update order with more files', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'type' => 'food_delivery',
+        'files' => ['orders/old.jpg'],
+    ]);
+
+    $file = \Illuminate\Http\UploadedFile::fake()->image('new.jpg');
+
+    $response = $this->putJson("/api/order/update/{$order->id}", [
+        'files' => [$file],
+    ]);
+
+    $response->assertStatus(200);
+    $this->assertCount(2, $response->json('data.files'));
+    $this->assertTrue(collect($response->json('data.files'))->contains(fn($url) => str_ends_with($url, 'orders/old.jpg')));
 });
