@@ -2,29 +2,29 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
-use App\Models\Runner;
-use Illuminate\Http\Request;
-use App\Traits\ApiResponseTraits;
 use App\Http\Controllers\Controller;
+use App\Models\Runner;
+use App\Models\User;
 use App\Services\VerificationService;
+use App\Traits\ApiResponseTraits;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
-use Illuminate\Support\Facades\{Auth, Hash, Validator};
 
 class AuthController extends Controller
 {
-    
     use ApiResponseTraits;
 
-    protected  $verificationService;
+    protected $verificationService;
 
     public function __construct(VerificationService $verificationService)
     {
         $this->verificationService = $verificationService;
     }
 
-    //registration function
+    // registration function
     public function register(Request $request)
     {
         $data = $request->validate([
@@ -34,10 +34,10 @@ class AuthController extends Controller
             'password_confirmation' => 'required|string|min:8',
             'role' => 'required|in:admin,user,runner',
             'runner_category' => 'required_if:role,runner|in:food_delivery,ferry_drops',
-            'phone' => 'required_if:role,runner|string|max:15',
-            'location' => 'required_if:role,runner|string|max:255',
+            'phone' => 'nullable|string|max:15',
+            'location' => 'nullable|string|max:255',
             'runner_type' => 'required_if:role,runner|in:registered,assigned',
-        ]); 
+        ]);
 
         $matchPassword = $data['password'] === $data['password_confirmation'];
         if (! $matchPassword) {
@@ -46,28 +46,27 @@ class AuthController extends Controller
             ]);
         }
 
-        $user = new User();
+        $user = new User;
         $user->name = $data['name'];
         $user->email = $data['email'];
         $user->password = Hash::make($data['password']);
-        $user->contact_number = $data['phone'];
-        $user->address = $data['location'];
+        $user->contact_number = $data['phone'] ?? null;
+        $user->address = $data['location'] ?? null;
         $user->role = $data['role'];
         $user->save();
 
         if ($data['role'] == 'runner') {
-            $runner = new Runner();
+            $runner = new Runner;
             $runner->user_id = $user->id;
-            $runner->type = $data['runner_type'];
-            $runner->category = $data['runner_category'];
+            $runner->type = $data['runner_type'] ?? null;
+            $runner->category = $data['runner_category'] ?? null;
             $runner->save();
         }
 
-        //verify email by sending otp (service)
+        // verify email by sending otp (service)
         $this->verificationService->sendOtp($user);
 
         return $this->successResponse(['user' => $user], 'User registered successfully. Please verify your email with the OTP sent.', 201);
-
     }
 
     public function verifyEmail(Request $request)
@@ -79,13 +78,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if(!$user) {
+        if (! $user) {
             return $this->errorResponse('User not found.', 404);
         }
 
         $result = $this->verificationService->verifyOtp($user, $data['otp']);
 
-        if($result['success']) {
+        if ($result['success']) {
             $user->email_verified_at = now();
             $user->otp = null;
             $user->otp_expires_at = null;
@@ -105,13 +104,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if(!$user) {
+        if (! $user) {
             return $this->errorResponse('User not found.', 404);
         }
 
         $result = $this->verificationService->resendOtp($user);
 
-        if($result['success']) {
+        if ($result['success']) {
             return $this->successResponse(null, $result['message'], 200);
         } else {
             return $this->errorResponse($result['message'], 400);
@@ -126,7 +125,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if(!$user) {
+        if (! $user) {
             return $this->errorResponse('User not found.', 404);
         }
 
@@ -146,13 +145,13 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if(!$user) {
+        if (! $user) {
             return $this->errorResponse('User not found.', 404);
         }
 
         $result = $this->verificationService->resetPassword($user, $data['otp'], $data['password']);
 
-        if($result['success']) {
+        if ($result['success']) {
             return $this->successResponse(null, $result['message'], 200);
         } else {
             return $this->errorResponse($result['message'], 400);
@@ -162,22 +161,23 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
-        
-        if (!$token = Auth::guard('api')->attempt($credentials)) {
+
+        if (! $token = Auth::guard('api')->attempt($credentials)) {
             return $this->errorResponse('Invalid credentials.', 401);
         }
 
         $user = Auth::guard('api')->user();
-        
+
         // Check if user is banned and ban hasn't expired
         if ($user->ban_expires_at && $user->ban_expires_at->isFuture()) {
             Auth::guard('api')->logout();
+
             return $this->errorResponse(
-                'Your account is banned until ' . $user->ban_expires_at->toDateTimeString() . '. Reason: ' . $user->ban_reason, 
+                'Your account is banned until '.$user->ban_expires_at->toDateTimeString().'. Reason: '.$user->ban_reason,
                 403
             );
         }
-        
+
         // If ban has expired, clear the ban
         if ($user->ban_expires_at && $user->ban_expires_at->isPast()) {
             $user->update([
@@ -187,11 +187,12 @@ class AuthController extends Controller
             ]);
         }
 
-        if (!$user->email_verified_at) {
+        if (! $user->email_verified_at) {
             Auth::guard('api')->logout();
+
             return $this->errorResponse('Email is not verified. Please verify your email before logging in.', 403);
         }
-        
+
         return $this->RespondWithToken($token, $user);
     }
 
@@ -212,11 +213,11 @@ class AuthController extends Controller
 
         $user = Auth::guard('api')->user();
 
-        if (!$user) {
+        if (! $user) {
             return $this->errorResponse('User not authenticated.', 401);
         }
         // Verify current password
-        if (!Hash::check($data['current_password'], $user->password)) {
+        if (! Hash::check($data['current_password'], $user->password)) {
             return $this->errorResponse('Current password is incorrect.', 400);
         }
 
@@ -231,15 +232,15 @@ class AuthController extends Controller
 
         return $this->successResponse(null, 'Password changed successfully.', 200);
     }
-    
-    // private functions 
+
+    // private functions
     private function RespondWithToken($token, $user)
     {
         return $this->successResponse([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => config('jwt.ttl') * 60, 
-            'user' => $user
+            'expires_in' => config('jwt.ttl') * 60,
+            'user' => $user,
         ], 'Authenticated successfully.', 200);
     }
 }

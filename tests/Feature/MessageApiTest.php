@@ -13,7 +13,7 @@ test('a user can send a message', function () {
     $receiver = User::factory()->create();
 
     $response = $this->actingAs($sender, 'api')
-        ->postJson('/api/messages', [
+        ->postJson('/api/messages/send', [
             'receiver_id' => $receiver->id,
             'message' => 'Hello there!',
         ]);
@@ -51,7 +51,7 @@ test('a user can retrieve message history', function () {
     ]);
 
     $response = $this->actingAs($sender, 'api')
-        ->getJson("/api/messages/{$receiver->id}");
+        ->getJson("/api/messages/get-messages/{$receiver->id}");
 
     $response->assertStatus(200)
         ->assertJsonCount(2, 'data')
@@ -60,14 +60,14 @@ test('a user can retrieve message history', function () {
 });
 
 test('unauthorized users cannot send or retrieve messages', function () {
-    $response = $this->postJson('/api/messages', [
+    $response = $this->postJson('/api/messages/send', [
         'receiver_id' => 1,
         'message' => 'Hello',
     ]);
 
     $response->assertStatus(401);
 
-    $response = $this->getJson('/api/messages/1');
+    $response = $this->getJson('/api/messages/get-messages/1');
 
     $response->assertStatus(401);
 });
