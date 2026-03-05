@@ -40,7 +40,7 @@ test('user can register and verify email with unified verify-otp api', function 
     expect($user->email_verified_at)->not->toBeNull();
 });
 
-test('user can reset password using otp and then token-based reset-password api', function () {
+test('user can reset password using otp and then authenticated reset-password api', function () {
     $user = User::factory()->create([
         'email' => 'reset@example.com',
         'password' => Hash::make('old_password'),
@@ -52,40 +52,38 @@ test('user can reset password using otp and then token-based reset-password api'
         ->assertStatus(200);
 
     $user->refresh();
-    // Simulate setting a known OTP in password_reset_tokens
+    // Simulate setting a known OTP on the user model (consistent with new logic)
     $otp = '654321';
-    DB::table('password_reset_tokens')->updateOrInsert(
-        ['email' => 'reset@example.com'],
-        [
-            'token' => Hash::make($otp),
-            'created_at' => now(),
-        ]
-    );
+    $user->update([
+        'otp' => Hash::make($otp),
+        'otp_expires_at' => now()->addMinutes(10),
+    ]);
 
-    // Step 2: Verify OTP to get reset token
+    // Step 2: Verify OTP to get reset token (JWT)
     $verifyResponse = $this->postJson('/api/auth/verify-otp', [
         'email' => 'reset@example.com',
         'otp' => $otp,
     ]);
 
     $verifyResponse->assertStatus(200);
-    $resetToken = $verifyResponse->json('data.token');
-    expect($resetToken)->not->toBeNull();
+    $verifyResponse->assertJsonStructure(['data' => ['access_token']]);
+    $token = $verifyResponse->json('data.access_token');
+    expect($token)->not->toBeNull();
 
-    // Step 3: Reset password with token
-    $resetResponse = $this->postJson('/api/auth/reset-password', [
-        'email' => 'reset@example.com',
-        'token' => $resetToken,
-        'password' => 'new_password',
-        'password_confirmation' => 'new_password',
-    ]);
+    // Step 3: Reset password with token in header and email in body
+    $resetResponse = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson('/api/auth/reset-password', [
+            'email' => 'reset@example.com',
+            'password' => 'new_password',
+            'password_confirmation' => 'new_password',
+        ]);
 
     $resetResponse->assertStatus(200);
 
     $user->refresh();
     expect(Hash::check('new_password', $user->password))->toBeTrue();
 
-    // Verify token is deleted
+    // Verify token record is deleted
     $tokenExists = DB::table('password_reset_tokens')->where('email', 'reset@example.com')->exists();
     expect($tokenExists)->toBeFalse();
 });

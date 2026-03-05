@@ -18,7 +18,7 @@ class RunnerFactory extends Factory
     {
         return [
             'user_id' => \App\Models\User::factory(),
-            'type' => $this->faker->randomElement(['registered', 'assigned']),
+            'type' => $this->faker->randomElement(['my_runner', 'other']),
             'category' => $this->faker->randomElement(['food_delivery', 'ferry_drops']),
         ];
     }

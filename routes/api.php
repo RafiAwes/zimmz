@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\RunnerController;
 use App\Http\Controllers\Api\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -32,7 +33,7 @@ Route::get('/user', function (Request $request) {
 
 Route::group(['controller' => AuthController::class, 'prefix' => 'auth'], function () {
     Route::post('/register', 'register');
-    Route::post('/verify-otp', 'verifyOtp');
+    Route::post('/verify-otp', 'verifyEmail');
     Route::post('/resend-otp', 'resendOtp');
     Route::post('/forgot-password', 'forgotPassword');
     Route::post('/login', 'login');
@@ -56,6 +57,7 @@ Route::group(['controller' => IslandController::class, 'prefix' => 'island', 'mi
     Route::put('/update/{id}', 'update')->middleware('role.admin');
     Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
     Route::get('/details/{id}', 'details');
+    Route::get('/ferries/{id}', 'ferries');
 });
 
 Route::group(['controller' => FerryController::class, 'prefix' => 'ferry', 'middleware' => 'auth:api'], function () {
@@ -106,4 +108,8 @@ Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 
     Route::post('send', 'sendMessage');
     Route::get('get-messages/{userId}', 'getMessages');
     Route::put('read/{senderId}', 'markAsRead');
+});
+
+Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {
+    Route::get('/get-all', 'getAll');
 });

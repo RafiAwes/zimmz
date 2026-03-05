@@ -26,7 +26,7 @@ class TaskServiceRequest extends FormRequest
         return [
             'task' => $isUpdate ? 'sometimes|string' : 'required|string',
             'price' => $isUpdate ? 'sometimes|string' : 'required|string',
-            // 'status' => 'sometimes|string|in:new,pending,completed,rejected',
+            'status' => 'sometimes|string|in:new,pending,completed,rejected',
         ];
     }
 }

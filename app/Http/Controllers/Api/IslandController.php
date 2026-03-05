@@ -63,4 +63,13 @@ class IslandController extends Controller
             200
         );
     }
+
+    public function ferries(Request $request, $id)
+    {
+        $per_page = $request->per_page ?? 5;
+        $island = Island::findOrFail($id);
+        $ferries = $island->ferries()->paginate($per_page);
+
+        return $this->successResponse($ferries, 'Ferries fetched successfully.', 200);
+    }
 }

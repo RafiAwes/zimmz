@@ -4,21 +4,23 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Notifications\SendOtpMail;
+use App\Traits\ApiResponseTraits;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class VerificationService
 {
+    use ApiResponseTraits;
+
     protected const EXPIRATION_TIME = 300; // 5 minutes
 
     private function generateOtp(): string
     {
-        $otp = random_int(100000, 999999);
-
-        return $otp;
+        return (string) random_int(100000, 999999);
     }
 
-    public function sendOtp(User $user): array
+    public function sendOtp(User $user): JsonResponse
     {
         $generate = $this->generateOtp();
         $otp = Hash::make($generate);
@@ -26,149 +28,134 @@ class VerificationService
         $user->update([
             'otp' => $otp,
             'otp_expires_at' => now()->addSeconds(self::EXPIRATION_TIME),
+            'otp_verified' => false,
+            'otp_verified_at' => null,
         ]);
 
         $user->notify(new SendOtpMail($generate));
 
-        return ['success' => true, 'message' => 'OTP sent successfully.'];
+        return $this->successResponse(null, 'OTP sent successfully.', 200);
     }
 
-    public function sendForgotPasswordOtp(User $user): array
+    public function verifyOtp(User $user, string $otp): JsonResponse
     {
-        $generate = $this->generateOtp();
-        $otp = Hash::make($generate);
+        // Determine flow: If email is not verified, it's registration flow.
+        // If email is verified, it's forgot password flow.
 
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $user->email],
-            [
-                'token' => $otp,
-                'created_at' => now(),
-            ]
-        );
-
-        $user->notify(new SendOtpMail($generate));
-
-        return ['success' => true, 'message' => 'Password reset OTP sent successfully.'];
-    }
-
-    public function verifyOtp(User $user, string $otp): array
-    {
         if ($user->email_verified_at === null) {
             // Registration/Email Verification flow
             if ($user->otp_expires_at && now()->greaterThan($user->otp_expires_at)) {
-                return [
-                    'success' => false,
-                    'message' => 'OTP has expired.',
-                ];
+                return $this->errorResponse('OTP has expired.', 400);
             }
 
             if ($user->otp === null) {
-                return [
-                    'success' => false,
-                    'message' => 'No OTP found for this user.',
-                ];
+                return $this->errorResponse('No OTP found for this user.', 400);
             }
 
             if (Hash::check($otp, $user->otp)) {
                 $user->update([
                     'otp' => null,
                     'otp_expires_at' => null,
-                    'otp_verified' => true,
+                    'otp_verified' => 1,
                     'otp_verified_at' => now(),
                     'email_verified_at' => now(),
                 ]);
 
-                return [
-                    'success' => true,
-                    'message' => 'Email verified successfully.',
-                ];
+                return $this->successResponse(null, 'Email verified successfully.', 200);
             }
         } else {
-            // Forgot Password flow
+            // Forgot Password flow — OTP is now stored on the user model (same as registration)
             $resetRecord = DB::table('password_reset_tokens')->where('email', $user->email)->first();
 
             if (! $resetRecord) {
-                return [
-                    'success' => false,
-                    'message' => 'No password reset OTP found for this user.',
-                ];
+                return $this->errorResponse('No password reset OTP found for this user.', 400);
             }
 
-            if (now()->diffInSeconds($resetRecord->created_at) > self::EXPIRATION_TIME) {
+            // Check expiry via user model's otp_expires_at
+            if (! $user->otp_expires_at || now()->greaterThan($user->otp_expires_at)) {
                 DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
-                return [
-                    'success' => false,
-                    'message' => 'OTP has expired.',
-                ];
+                return $this->errorResponse('OTP has expired.', 400);
             }
 
-            if (Hash::check($otp, $resetRecord->token)) {
+            if ($user->otp === null) {
+                return $this->errorResponse('No OTP found for this user.', 400);
+            }
+
+            // Check against user.otp — same pattern as registration flow
+            if (Hash::check($otp, $user->otp)) {
                 $user->update([
+                    'otp' => null,
+                    'otp_expires_at' => null,
                     'otp_verified' => true,
                     'otp_verified_at' => now(),
                 ]);
 
-                return [
-                    'success' => true,
-                    'message' => 'OTP verified successfully. You can now reset your password.',
-                ];
+                return $this->successResponse(null, 'OTP verified successfully. You can now reset your password.', 200);
             }
         }
 
-        return [
-            'success' => false,
-            'message' => 'Invalid OTP.',
-        ];
+        return $this->errorResponse('Invalid OTP.', 400);
     }
 
-    public function resendOtp(User $user): array
+    public function resendOtp(User $user): JsonResponse
     {
+        if ($user->email_verified_at !== null) {
+            return $this->forgotPassword($user);
+        }
+
         return $this->sendOtp($user);
     }
 
-    public function generatePasswordResetToken(string $email): string
+    public function forgotPassword(User $user): JsonResponse
     {
-        $token = str_pad((string) random_int(1, 99999999), 8, '0', STR_PAD_LEFT);
+        $generate = $this->generateOtp();
+        $otp = Hash::make($generate);
 
+        // Store OTP on user model — same pattern as registration (consistent and reliable)
+        $user->update([
+            'otp' => $otp,
+            'otp_expires_at' => now()->addSeconds(self::EXPIRATION_TIME),
+            'otp_verified' => false,
+            'otp_verified_at' => null,
+        ]);
+
+        // Keep a record in password_reset_tokens as a "reset requested" flag
         DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $email],
-            [
-                'token' => Hash::make($token),
-                'created_at' => now(),
-            ]
+            ['email' => $user->email],
+            ['token' => $otp, 'created_at' => now()]
         );
 
-        return $token;
+        $user->notify(new SendOtpMail($generate));
+
+        return $this->successResponse(null, 'Password reset OTP sent to your email.', 200);
     }
 
-    public function verifyPasswordResetToken(string $email, string $token): bool
+    public function resetPassword(User $user, string $password): JsonResponse
     {
-        // For password reset, we check the token or the otp_verified flag
-        // However, the user said "it will use password reset token"
-        // But their snippet says "You can now reset your password" after OTP verify
-        // Let's implement BOTH: OTP verify returns a token, and resetPassword uses it.
-        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+        $otpVerifiedAt = $user->getRawOriginal('otp_verified_at')
+            ? \Carbon\Carbon::parse($user->getRawOriginal('otp_verified_at'))
+            : null;
 
-        if (! $record) {
-            return false;
+        if (! $user->otp_verified || ! $otpVerifiedAt || now()->diffInSeconds($otpVerifiedAt) > self::EXPIRATION_TIME) {
+            return $this->errorResponse('Password reset OTP verification required before resetting password.', 400);
         }
 
-        if (now()->parse($record->created_at)->addMinutes(60)->isPast()) {
-            DB::table('password_reset_tokens')->where('email', $email)->delete();
+        $resetRecord = DB::table('password_reset_tokens')->where('email', $user->email)->first();
 
-            return false;
+        if (! $resetRecord) {
+            return $this->errorResponse('Password reset OTP verification required before resetting password.', 400);
         }
 
-        if (Hash::check($token, $record->token)) {
-            return true;
-        }
+        // Update password and clear record
+        $user->update([
+            'password' => Hash::make($password),
+            'otp_verified' => false,
+            'otp_verified_at' => null,
+        ]);
 
-        return false;
-    }
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
-    public function deletePasswordResetToken(string $email): void
-    {
-        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        return $this->successResponse(null, 'Password reset successfully.', 200);
     }
 }
