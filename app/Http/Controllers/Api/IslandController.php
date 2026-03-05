@@ -54,7 +54,13 @@ class IslandController extends Controller
 
     public function details(Request $request, $id)
     {
-        $island = Island::with('ferries')->findOrFail($id);
-        return $this->successResponse($island, 'Island details fetched successfully.', 200);
+        $island = Island::findOrFail($id);
+        $total_ferries = $island->ferries()->count();
+
+        return $this->successResponse(
+            array_merge($island->toArray(), ['total_ferries' => $total_ferries]),
+            'Island details fetched successfully.',
+            200
+        );
     }
 }

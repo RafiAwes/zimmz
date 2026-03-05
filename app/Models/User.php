@@ -31,6 +31,8 @@ class User extends Authenticatable implements JWTSubject
         'google_id',
         'otp',
         'otp_expires_at',
+        'otp_verified',
+        'otp_verified_at',
         'email_verified_at',
         'gender',
         'ban_type',
@@ -60,6 +62,8 @@ class User extends Authenticatable implements JWTSubject
             'password' => 'hashed',
             'ban_expires_at' => 'datetime',
             'otp_expires_at' => 'datetime',
+            'otp_verified' => 'boolean',
+            'otp_verified_at' => 'datetime',
         ];
     }
 

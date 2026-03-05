@@ -69,7 +69,7 @@ class AuthController extends Controller
         return $this->successResponse(['user' => $user], 'User registered successfully. Please verify your email with the OTP sent.', 201);
     }
 
-    public function verifyEmail(Request $request)
+    public function verifyOtp(Request $request)
     {
         $data = $request->validate([
             'email' => 'required|string|email|max:255',
@@ -82,15 +82,24 @@ class AuthController extends Controller
             return $this->errorResponse('User not found.', 404);
         }
 
+        $isInitialVerification = ($user->email_verified_at === null);
+
         $result = $this->verificationService->verifyOtp($user, $data['otp']);
 
         if ($result['success']) {
-            $user->email_verified_at = now();
-            $user->otp = null;
-            $user->otp_expires_at = null;
-            $user->save();
+            if ($isInitialVerification) {
+                // Generate token for login since it's the first time verifying
+                $token = Auth::guard('api')->login($user);
 
-            return $this->successResponse(null, 'Email verified successfully.', 200);
+                return $this->RespondWithToken($token, $user);
+            }
+
+            // For password reset flow, generate a token
+            $token = $this->verificationService->generatePasswordResetToken($user->email);
+
+            return $this->successResponse([
+                'token' => $token,
+            ], $result['message'], 200);
         } else {
             return $this->errorResponse($result['message'], 400);
         }
@@ -129,33 +138,28 @@ class AuthController extends Controller
             return $this->errorResponse('User not found.', 404);
         }
 
-        $result = $this->verificationService->forgotPassword($user);
+        $this->verificationService->sendForgotPasswordOtp($user);
 
-        return $this->successResponse(null, $result['message'], 200);
+        return $this->successResponse(null, 'OTP sent successfully. Please check your email for the reset code.', 200);
     }
 
     public function resetPassword(Request $request)
     {
         $data = $request->validate([
-            'email' => 'required|string|email|max:255',
-            'otp' => 'required|string|max:6',
             'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string|min:8',
         ]);
 
-        $user = User::where('email', $data['email'])->first();
+        $user = Auth::guard('api')->user();
 
         if (! $user) {
-            return $this->errorResponse('User not found.', 404);
+            return $this->errorResponse('Unauthenticated. Please verify OTP first.', 401);
         }
 
-        $result = $this->verificationService->resetPassword($user, $data['otp'], $data['password']);
+        $user->password = Hash::make($data['password']);
+        $user->save();
 
-        if ($result['success']) {
-            return $this->successResponse(null, $result['message'], 200);
-        } else {
-            return $this->errorResponse($result['message'], 400);
-        }
+        return $this->successResponse(null, 'Password reset successfully.', 200);
     }
 
     public function login(Request $request)

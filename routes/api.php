@@ -7,9 +7,9 @@ use App\Http\Controllers\Api\GeneralController;
 use App\Http\Controllers\Api\IslandController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -32,13 +32,17 @@ Route::get('/user', function (Request $request) {
 
 Route::group(['controller' => AuthController::class, 'prefix' => 'auth'], function () {
     Route::post('/register', 'register');
-    Route::post('/verify-email', 'verifyEmail');
+    Route::post('/verify-otp', 'verifyOtp');
     Route::post('/resend-otp', 'resendOtp');
     Route::post('/forgot-password', 'forgotPassword');
-    Route::post('/reset-password', 'resetPassword');
-    Route::post('/change-password', 'changePassword');
     Route::post('/login', 'login');
     Route::post('/logout', 'logout');
+
+    // Protected routes — require JWT token (e.g. from OTP verification)
+    Route::middleware('auth:api')->group(function () {
+        Route::post('/reset-password', 'resetPassword');
+        Route::post('/change-password', 'changePassword');
+    });
 });
 
 Route::group(['controller' => ProfileController::class, 'prefix' => 'profile', 'middleware' => 'auth:api'], function () {
@@ -60,14 +64,6 @@ Route::group(['controller' => FerryController::class, 'prefix' => 'ferry', 'midd
     Route::put('/update/{id}', 'update')->middleware('role.admin');
     Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
     Route::get('/details/{id}', 'details');
-});
-
-Route::group(['controller' => RestaurantController::class, 'prefix' => 'restaurant', 'middleware' => 'auth:api'], function () {
-    Route::post('/create', 'create')->middleware('role.admin');
-    Route::get('/get-all', 'getAll');
-    Route::get('/details/{id}', 'details');
-    Route::put('/update/{id}', 'update')->middleware('role.admin');
-    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
 });
 
 Route::group(['controller' => RestaurantController::class, 'prefix' => 'restaurant', 'middleware' => 'auth:api'], function () {
