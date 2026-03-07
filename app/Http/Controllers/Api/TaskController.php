@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\TaskService\TaskServiceRequest;
 use App\Models\TaskService;
+use App\Models\User;
 use App\Traits\ApiResponseTraits;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,8 +52,14 @@ class TaskController extends Controller
     public function details($id): JsonResponse
     {
         $taskService = TaskService::findOrFail($id);
+        $user = User::findOrFail($taskService->user_id);
+        // $runner = User::findOrFail($taskService->runner_id);
 
-        return $this->successResponse($taskService, 'Task service details fetched successfully.', 200);
+        return $this->successResponse([
+            'taskService' => $taskService,
+            'user' => $user,
+            // 'runner' => $runner,
+        ], 'Task service details fetched successfully.', 200);
     }
 
     public function getMyTasks(): JsonResponse
