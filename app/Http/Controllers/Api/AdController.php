@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Ad;
 use App\Traits\ApiResponseTraits;
 use App\Traits\ImageTrait;
+use Illuminate\Http\Request;
 
 class AdController extends Controller
 {
@@ -18,7 +18,7 @@ class AdController extends Controller
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $bannerPath = $this->uploadAvatar($request, 'banner', 'images/ads');
+        $bannerPath = $this->uploadAvatar($request, 'banner', 'ads');
 
         $ad = Ad::create([
             'banner' => $bannerPath,
@@ -38,6 +38,7 @@ class AdController extends Controller
     public function details(Request $request, $id)
     {
         $ad = Ad::findOrFail($id);
+
         return $this->successResponse($ad, 'Ad banner details fetched successfully.', 200);
     }
 
@@ -57,7 +58,7 @@ class AdController extends Controller
             }
 
             // Upload new image
-            $bannerPath = $this->uploadAvatar($request, 'banner', 'images/ads');
+            $bannerPath = $this->uploadAvatar($request, 'banner', 'ads');
             $ad->update(['banner' => $bannerPath]);
         }
 
