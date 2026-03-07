@@ -37,10 +37,10 @@ class ProfileController extends Controller
         $allowedRunnerFields = [];
 
         if ($user->role === 'runner' && $user->runner) {
-            if ($user->runner->type === 'other') {
+            if ($user->runner->type === 'assigned') {
                 $allowedUserFields = ['name', 'email', 'contact_number', 'address', 'password'];
                 $allowedRunnerFields = ['category']; // maps from runner_category
-            } elseif ($user->runner->type === 'my_runner') {
+            } elseif ($user->runner->type === 'registered') {
                 $allowedUserFields = ['name', 'email', 'contact_number', 'address'];
             }
         } elseif ($user->role === 'user') {

@@ -37,7 +37,7 @@ class AuthController extends Controller
             'runner_category' => 'required_if:role,runner|in:food_delivery,ferry_drops',
             'phone' => 'nullable|string|max:15',
             'location' => 'nullable|string|max:255',
-            'runner_type' => 'required_if:role,runner|in:my_runner,other',
+            'runner_type' => 'required_if:role,runner|in:registered,assigned',
         ]);
 
         $matchPassword = $data['password'] === $data['password_confirmation'];
