@@ -44,7 +44,7 @@ class TaskController extends Controller
 
     public function getAll(): JsonResponse
     {
-        $taskServices = TaskService::all();
+        $taskServices = TaskService::with('user')->get();
 
         return $this->successResponse($taskServices, 'Task services fetched successfully.', 200);
     }
