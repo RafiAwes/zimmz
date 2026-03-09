@@ -1,0 +1,76 @@
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true i… 0.02s  
+
+   PASS  Tests\Feature\Api\AuthRefactorTest
+  ✓ user can re… 0.43s  
+  ✓ user can re… 0.06s  
+
+   PASS  Tests\Feature\Api\PageFaqTest
+  ✓ can get a p… 0.02s  
+  ✓ admin can c… 0.02s  
+  ✓ admin can u… 0.02s  
+  ✓ admin can d… 0.02s  
+  ✓ guest or no… 0.02s  
+  ✓ can get all… 0.02s  
+  ✓ admin can u… 0.02s  
+  ✓ admin can d… 0.02s  
+
+   FAIL  Tests\Feature\Api\TaskControllerTest
+  ✓ example      0.03s  
+  ✓ it can fetc… 0.03s  
+  ⨯ it can fetc… 0.03s  
+  ✓ it can upda… 0.02s  
+  ✓ it can dele… 0.02s  
+  ✓ it can fetc… 0.02s  
+  ✓ it can fetc… 0.02s  
+  ✓ runner can…  0.02s  
+  ✓ runner can…  0.02s  
+  ✓ runner can…  0.02s  
+
+   PASS  Tests\Feature\ExampleTest
+  ✓ the applica… 0.02s  
+
+   PASS  Tests\Feature\MessageApiTest
+  ✓ a user can…  0.02s  
+  ✓ a user can…  0.02s  
+  ✓ unauthorize… 0.02s  
+
+   PASS  Tests\Feature\OrderApiTest
+  ✓ can list al… 0.03s  
+  ✓ can list or… 0.02s  
+  ✓ can create…  0.03s  
+  ✓ can create…  0.02s  
+  ✓ can update…  0.02s  
+  ✓ can delete…  0.02s  
+  ✓ can show or… 0.02s  
+  ✓ can create…  0.04s  
+  ✓ can update…  0.03s  
+
+   PASS  Tests\Feature\OrderRelationshipTest
+  ✓ an order be… 0.03s  
+  ✓ a food deli… 0.02s  
+  ✓ a ferry dro… 0.02s  
+
+   PASS  Tests\Feature\UserTest
+  ✓ ban expires… 0.02s  
+  ✓ otp expires… 0.02s  
+  ────────────────────  
+   FAILED  Tests\Fea…   
+  Failed asserting that null is identical to 1.
+
+  at tests\Feature\Api\TaskControllerTest.php:37
+     33▕ 
+     34▕     $response = $this->getJson("/api/task-service/details/{$taskService->id}");
+     35▕ 
+     36▕     $response->assertStatus(200)
+  ➜  37▕         ->assertJsonPath('data.id', $taskService->id);
+     38▕ });
+     39▕ 
+     40▕ test('it can update a task service', function () {
+     41▕     $taskService = TaskService::factory()->create();
+
+
+  Tests:    1 failed, 38 passed (110 assertions)
+  Duration: 1.51s
+

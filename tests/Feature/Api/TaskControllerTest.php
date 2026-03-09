@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\User;
 use App\Models\TaskService;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
@@ -10,7 +10,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => 'user']);
     $this->token = JWTAuth::fromUser($this->user);
-    $this->withHeader('Authorization', 'Bearer ' . $this->token);
+    $this->withHeader('Authorization', 'Bearer '.$this->token);
 });
 
 test('example', function () {
@@ -34,7 +34,7 @@ test('it can fetch task service details', function () {
     $response = $this->getJson("/api/task-service/details/{$taskService->id}");
 
     $response->assertStatus(200)
-        ->assertJsonPath('data.id', $taskService->id);
+        ->assertJsonPath('data.taskService.id', $taskService->id);
 });
 
 test('it can update a task service', function () {
@@ -78,7 +78,7 @@ test('it can fetch my tasks as a runner', function () {
     TaskService::factory()->create(['runner_id' => $runner->id]);
     TaskService::factory()->create(); // Another runner's or unassigned task
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->getJson('/api/task-service/my-tasks');
 
     $response->assertStatus(200)
@@ -90,7 +90,7 @@ test('runner can accept a task', function () {
     $token = JWTAuth::fromUser($runner);
     $taskService = TaskService::factory()->create(['status' => 'new']);
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->postJson("/api/task-service/accept/{$taskService->id}");
 
     $response->assertStatus(200);
@@ -106,7 +106,7 @@ test('runner can reject a task', function () {
     $token = JWTAuth::fromUser($runner);
     $taskService = TaskService::factory()->create(['status' => 'pending']);
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->postJson("/api/task-service/reject/{$taskService->id}");
 
     $response->assertStatus(200);
@@ -121,7 +121,7 @@ test('runner can complete a task', function () {
     $token = JWTAuth::fromUser($runner);
     $taskService = TaskService::factory()->create(['status' => 'pending']);
 
-    $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->postJson("/api/task-service/complete/{$taskService->id}");
 
     $response->assertStatus(200);

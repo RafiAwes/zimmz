@@ -14,6 +14,16 @@ class ProfileController extends Controller
 {
     use ApiResponseTraits, ImageTrait;
 
+    public function viewProfile(Request $request)
+    {
+        $user = Auth::guard('api')->user();
+        if ($user) {
+            $user->load('runner');
+        }
+
+        return $this->successResponse($user, 'Profile details fetched successfully.', 200);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = Auth::guard('api')->user();

@@ -51,6 +51,20 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'total_orders',
+        'total_food_delivery_orders',
+        'total_ferry_drop_orders',
+        'total_tasks_created',
+        'runner_orders_completed',
+        'runner_orders_pending',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -104,5 +118,35 @@ class User extends Authenticatable implements JWTSubject
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function getTotalOrdersAttribute()
+    {
+        return $this->orders()->count();
+    }
+
+    public function getTotalFoodDeliveryOrdersAttribute()
+    {
+        return $this->orders()->where('type', 'food_delivery')->count();
+    }
+
+    public function getTotalFerryDropOrdersAttribute()
+    {
+        return $this->orders()->where('type', 'ferry_drops')->count();
+    }
+
+    public function getTotalTasksCreatedAttribute()
+    {
+        return TaskService::where('user_id', $this->id)->count();
+    }
+
+    public function getRunnerOrdersCompletedAttribute()
+    {
+        return TaskService::where('runner_id', $this->id)->where('status', 'completed')->count();
+    }
+
+    public function getRunnerOrdersPendingAttribute()
+    {
+        return TaskService::where('runner_id', $this->id)->whereIn('status', ['new', 'pending'])->count();
     }
 }

@@ -47,6 +47,7 @@ Route::group(['controller' => AuthController::class, 'prefix' => 'auth'], functi
 });
 
 Route::group(['controller' => ProfileController::class, 'prefix' => 'profile', 'middleware' => 'auth:api'], function () {
+    Route::get('/', 'viewProfile');
     Route::post('/update-profile', 'updateProfile');
     Route::post('/update-avatar', 'updateAvatar');
 });
@@ -112,4 +113,5 @@ Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 
 
 Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {
     Route::get('/get-all', 'getAll');
+    Route::post('/create', 'create')->middleware('role.admin');
 });
