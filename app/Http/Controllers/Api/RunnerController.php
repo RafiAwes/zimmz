@@ -15,6 +15,11 @@ class RunnerController extends Controller
 {
     use ApiResponseTraits;
 
+    public function runnersList(Request $request)
+    {
+        return $this->getAll($request);
+    }
+
     public function create(StoreRunnerRequest $request)
     {
         $validated = $request->validated();

@@ -1,19 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\AdController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\FerryController;
-use App\Http\Controllers\Api\GeneralController;
-use App\Http\Controllers\Api\IslandController;
-use App\Http\Controllers\Api\MessageController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RestaurantController;
-use App\Http\Controllers\Api\RunnerController;
-use App\Http\Controllers\Api\TaskController;
-use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\{AdController, AuthController, FerryController, GeneralController, IslandController, MessageController, OrderController, ProfileController, RestaurantController, RunnerController, TaskController, UserController};
 
 Route::group(['controller' => GeneralController::class, 'prefix' => 'pages'], function () {
     Route::get('/{title}', 'getPage');
@@ -113,11 +102,14 @@ Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 
 });
 
 Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {
+    Route::get('/list', 'runnersList');
     Route::get('/get-all', 'getAll');
     Route::get('/details/{id}', 'details');
     Route::post('/create', 'create')->middleware('role.admin');
 });
 
 Route::group(['controller' => UserController::class, 'prefix' => 'user', 'middleware' => 'auth:api'], function () {
+    Route::get('/list', 'usersList')->middleware('role.admin');
+    Route::get('/lost-users', 'lostUsers')->middleware('role.admin');
     Route::get('/details/{id}', 'details');
 });
