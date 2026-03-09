@@ -70,4 +70,11 @@ class RunnerController extends Controller
 
         return $this->successResponse($runners, 'Runners fetched successfully.', 200);
     }
+
+    public function details($id)
+    {
+        $runner = User::where('role', 'runner')->with('runner')->findOrFail($id);
+
+        return $this->successResponse($runner, 'Runner details fetched successfully.', 200);
+    }
 }

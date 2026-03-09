@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
 use App\Http\Controllers\Api\RunnerController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -113,5 +114,10 @@ Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 
 
 Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {
     Route::get('/get-all', 'getAll');
+    Route::get('/details/{id}', 'details');
     Route::post('/create', 'create')->middleware('role.admin');
+});
+
+Route::group(['controller' => UserController::class, 'prefix' => 'user', 'middleware' => 'auth:api'], function () {
+    Route::get('/details/{id}', 'details');
 });
