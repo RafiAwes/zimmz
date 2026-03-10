@@ -18,6 +18,7 @@ class OrderController extends Controller
     {
         $status = $request->input('status');
         $type = $request->input('type');
+        $user_id = $request->input('user_id');
         $per_page = $request->input('per_page', 10);
 
         if ($type === 'ferry_drop') {
@@ -31,6 +32,9 @@ class OrderController extends Controller
             })
             ->when($type, function ($query, $type) {
                 $query->where('type', $type);
+            })
+            ->when($user_id, function ($query, $user_id) {
+                $query->where('user_id', $user_id);
             })
             ->latest();
 
