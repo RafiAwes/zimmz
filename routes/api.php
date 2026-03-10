@@ -52,6 +52,7 @@ Route::group(['controller' => ProfileController::class, 'prefix' => 'profile', '
     Route::get('/', 'viewProfile');
     Route::post('/update-profile', 'updateProfile');
     Route::post('/update-avatar', 'updateAvatar');
+    Route::delete('/delete-account', 'deleteAccount');
 });
 
 Route::group(['controller' => IslandController::class, 'prefix' => 'island', 'middleware' => 'auth:api'], function () {

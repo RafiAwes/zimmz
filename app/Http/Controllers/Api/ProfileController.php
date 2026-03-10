@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Traits\ApiResponseTraits;
-use App\Traits\ImageTrait;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\{Auth, DB, Hash};
 use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
+use App\Traits\{ApiResponseTraits, ImageTrait};
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class ProfileController extends Controller
 {
@@ -123,6 +122,48 @@ class ProfileController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse(
                 'Failed to update avatar',
+                500,
+                $e->getMessage().' at Line: '.$e->getLine()
+            );
+        }
+    }
+
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = Auth::guard('api')->user();
+
+        if (! $user) {
+            return $this->errorResponse('User not authenticated.', 401);
+        }
+
+        $validatedData = $request->validate([
+            'current_password' => 'required|string|min:8',
+        ]);
+
+        if (! Hash::check($validatedData['current_password'], $user->password)) {
+            return $this->errorResponse('Current password is incorrect.', 400);
+        }
+
+        $token = JWTAuth::getToken();
+        $oldAvatar = $user->getRawOriginal('avatar');
+
+        try {
+            DB::transaction(function () use ($user): void {
+                $user->delete();
+            });
+
+            if ($oldAvatar) {
+                $this->deleteImage($oldAvatar);
+            }
+
+            if ($token) {
+                JWTAuth::invalidate($token);
+            }
+
+            return $this->successResponse(null, 'Account deleted successfully.', 200);
+        } catch (\Exception $e) {
+            return $this->errorResponse(
+                'Failed to delete account',
                 500,
                 $e->getMessage().' at Line: '.$e->getLine()
             );
