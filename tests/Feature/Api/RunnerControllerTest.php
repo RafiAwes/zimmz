@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\Runner;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\{Order, Runner, User};
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 uses(RefreshDatabase::class);
@@ -73,4 +72,50 @@ test('unauthenticated user cannot view runners list', function () {
     $response = $this->getJson('/api/runner/list');
 
     $response->assertStatus(401);
+});
+
+test('runner can decline order and clear assignment', function () {
+    $runnerUser = User::factory()->create(['role' => 'runner']);
+    $token = JWTAuth::fromUser($runnerUser);
+
+    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+
+    $order = Order::factory()->create([
+        'runner_id' => $runner->id,
+        'runner_status' => 'pending',
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/runner/decline-order/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.id', $order->id)
+        ->assertJsonPath('data.runner_id', null)
+        ->assertJsonPath('data.runner_status', null);
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $order->id,
+        'runner_id' => null,
+        'runner_status' => null,
+    ]);
+});
+
+test('unauthenticated user cannot decline order', function () {
+    $order = Order::factory()->create();
+
+    $response = $this->postJson("/api/runner/decline-order/{$order->id}");
+
+    $response->assertStatus(401);
+});
+
+test('non runner cannot decline order', function () {
+    $user = User::factory()->create(['role' => 'user']);
+    $token = JWTAuth::fromUser($user);
+    $order = Order::factory()->create();
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/runner/decline-order/{$order->id}");
+
+    $response->assertStatus(403);
 });

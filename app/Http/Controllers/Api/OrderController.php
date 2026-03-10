@@ -21,20 +21,24 @@ class OrderController extends Controller
     public function getAll(Request $request): JsonResponse
     {
         $status = $request->input('status');
+        $type = $request->input('type');
         $per_page = $request->input('per_page', 10);
 
-        if (is_null($status)) {
-            $orders = Order::query()
-                ->with(['user', 'foodDelivery', 'ferryDrop'])
-                ->latest()
-                ->paginate($per_page);
-        } else {
-            $orders = Order::query()
-                ->with(['user', 'foodDelivery', 'ferryDrop'])
-                ->where('status', $status)
-                ->latest()
-                ->paginate($per_page);
+        if ($type === 'ferry_drop') {
+            $type = 'ferry_drops';
         }
+
+        $ordersQuery = Order::query()
+            ->with(['user', 'foodDelivery', 'ferryDrop'])
+            ->when($status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->when($type, function ($query, $type) {
+                $query->where('type', $type);
+            })
+            ->latest();
+
+        $orders = $ordersQuery->paginate($per_page);
 
         return $this->successResponse($orders, 'Orders fetched successfully.', 200);
     }

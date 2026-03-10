@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreRunnerRequest;
+use App\Models\Order;
 use App\Models\Runner;
 use App\Models\User;
 use App\Traits\ApiResponseTraits;
@@ -81,5 +82,44 @@ class RunnerController extends Controller
         $runner = User::where('role', 'runner')->with('runner')->findOrFail($id);
 
         return $this->successResponse($runner, 'Runner details fetched successfully.', 200);
+    }
+
+    public function acceptOrder($order_id)
+    {
+        $order = DB::transaction(function () use ($order_id) {
+            $order = Order::query()->findOrFail($order_id);
+
+            $order->update([
+                'runner_status' => 'assigned',
+            ]);
+
+            return $order;
+        });
+
+        return $this->successResponse(
+            $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
+            'Order accepted and assigned successfully.',
+            200
+        );
+    }
+
+    public function declineOrder($order_id)
+    {
+        $order = DB::transaction(function () use ($order_id) {
+            $order = Order::query()->findOrFail($order_id);
+
+            $order->update([
+                'runner_id' => null,
+                'runner_status' => null,
+            ]);
+
+            return $order;
+        });
+
+        return $this->successResponse(
+            $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
+            'Order declined successfully.',
+            200
+        );
     }
 }

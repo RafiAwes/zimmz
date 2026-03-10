@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class Order extends Model
 {
@@ -13,6 +12,8 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'runner_id',
+        'runner_status',
         'name',
         'status',
         'details',
@@ -40,7 +41,7 @@ class Order extends Model
 
                 // 2. Now loop through the ACTUAL array of file paths
                 return collect($filesArray)
-                    ->map(fn($file) => str_starts_with($file, 'http') ? $file : asset('storage/' . $file))
+                    ->map(fn ($file) => str_starts_with($file, 'http') ? $file : asset('storage/'.$file))
                     ->toArray();
             },
         );
@@ -49,6 +50,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function runner()
+    {
+        return $this->belongsTo(Runner::class);
     }
 
     public function foodDelivery()

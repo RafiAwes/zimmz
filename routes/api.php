@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{AdController, AuthController, FerryController, GeneralController, IslandController, MessageController, OrderController, ProfileController, RestaurantController, RunnerController, TaskController, UserController};
+use App\Http\Controllers\Api\{AdController, AuthController, FerryController, GeneralController, IslandController, MessageController, OrderController, ProfileController, RestaurantController, RunnerController, TaskController, UserController, adminController};
 
 Route::group(['controller' => GeneralController::class, 'prefix' => 'pages'], function () {
     Route::get('/{title}', 'getPage');
@@ -106,10 +106,16 @@ Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'mi
     Route::get('/get-all', 'getAll');
     Route::get('/details/{id}', 'details');
     Route::post('/create', 'create')->middleware('role.admin');
+    Route::post('/accept-order/{order_id}', 'acceptOrder');
+    Route::post('/decline-order/{order_id}', 'declineOrder');
 });
 
 Route::group(['controller' => UserController::class, 'prefix' => 'user', 'middleware' => 'auth:api'], function () {
     Route::get('/list', 'usersList')->middleware('role.admin');
     Route::get('/lost-users', 'lostUsers')->middleware('role.admin');
     Route::get('/details/{id}', 'details');
+});
+
+Route::group(['controller' => adminController::class, 'prefix' => 'admin', 'middleware' => ['auth:api', 'role.admin']], function () {
+    Route::post('/accept-and-assign/{order_id}/{runner_user_id}', 'acceptAndAssign');
 });

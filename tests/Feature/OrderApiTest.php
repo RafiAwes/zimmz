@@ -6,13 +6,10 @@ use App\Models\Order;
 use App\Models\Restaurant;
 use App\Models\User;
 
-
-
-
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => 'user']);
     $this->token = \PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::fromUser($this->user);
-    $this->withHeader('Authorization', 'Bearer ' . $this->token);
+    $this->withHeader('Authorization', 'Bearer '.$this->token);
 });
 
 test('can list all statuses when status is null', function () {
@@ -35,6 +32,17 @@ test('can list orders filtered by status', function () {
 
     $response->assertStatus(200)
         ->assertJsonCount(2, 'data.data');
+});
+
+test('can list orders filtered by type', function () {
+    Order::factory()->create(['type' => 'food_delivery', 'user_id' => $this->user->id]);
+    Order::factory()->create(['type' => 'ferry_drops', 'user_id' => $this->user->id]);
+
+    $response = $this->getJson('/api/order/get-all?type=ferry_drop');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.type', 'ferry_drops');
 });
 
 test('can create food delivery order', function () {
@@ -174,5 +182,5 @@ test('can update order with more files', function () {
 
     $response->assertStatus(200);
     $this->assertCount(2, $response->json('data.files'));
-    $this->assertTrue(collect($response->json('data.files'))->contains(fn($url) => str_ends_with($url, 'orders/old.jpg')));
+    $this->assertTrue(collect($response->json('data.files'))->contains(fn ($url) => str_ends_with($url, 'orders/old.jpg')));
 });
