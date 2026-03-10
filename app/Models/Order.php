@@ -22,6 +22,8 @@ class Order extends Model
         'drop_location',
         'type',
         'files',
+        'lat',
+        'long',
     ];
 
     protected function casts(): array

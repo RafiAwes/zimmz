@@ -3,23 +3,26 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Api\Restaurant\StoreRestaurantRequest;
+use App\Http\Requests\Api\Restaurant\UpdateRestaurantRequest;
 use App\Models\Restaurant;
 use App\Traits\ApiResponseTraits;
+use App\Traits\LocationTrait;
+use Illuminate\Http\Request;
 
 class RestaurantController extends Controller
 {
     use ApiResponseTraits;
+    use LocationTrait;
 
-    public function create(Request $request)
+    public function create(StoreRestaurantRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'lat' => 'required|string',
-            'long' => 'required|string',
-        ]);
+        $locationData = $this->getLocationData($request->validated());
 
-        $restaurant = Restaurant::create($data);
+        $restaurant = Restaurant::create([
+            'name' => $request->name,
+            ...$locationData,
+        ]);
 
         return $this->successResponse($restaurant, 'Restaurant created successfully.', 201);
     }
@@ -39,19 +42,22 @@ class RestaurantController extends Controller
     public function details(Request $request, $id)
     {
         $restaurant = Restaurant::findOrFail($id);
+
         return $this->successResponse($restaurant, 'Restaurant details fetched successfully.', 200);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateRestaurantRequest $request, $id)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'lat' => 'sometimes|string',
-            'long' => 'sometimes|string',
-        ]);
+        $locationData = array_filter(
+            $this->getLocationData($request->validated()),
+            fn ($value) => $value !== null,
+        );
 
         $restaurant = Restaurant::findOrFail($id);
-        $restaurant->update($data);
+        $restaurant->update(array_merge(
+            $request->only(['name']),
+            $locationData,
+        ));
 
         return $this->successResponse($restaurant, 'Restaurant updated successfully.', 200);
     }

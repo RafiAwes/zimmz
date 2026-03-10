@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Api\Order;
 
+use App\Traits\LocationTrait;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateOrderRequest extends FormRequest
 {
+    use LocationTrait;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -23,6 +26,9 @@ class UpdateOrderRequest extends FormRequest
             'time' => 'nullable|string',
             'total_cost' => 'nullable|numeric',
             'drop_location' => 'nullable|string',
+            // Location fields
+            'lat' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
+            'long' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
             // Typically type shouldn't change for an existing order,
             // but we'll allow updating child fields if needed.
 
@@ -40,6 +46,14 @@ class UpdateOrderRequest extends FormRequest
             'pickup_location' => 'nullable|string',
             'drop_fee' => 'nullable|numeric',
             'package_fee' => 'nullable|numeric',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'lat.regex' => 'Latitude must be a valid coordinate.',
+            'long.regex' => 'Longitude must be a valid coordinate.',
         ];
     }
 }

@@ -122,4 +122,24 @@ class RunnerController extends Controller
             200
         );
     }
+
+    public function orderCompleted($order_id)
+    {
+        $order = DB::transaction(function () use ($order_id) {
+            $order = Order::query()->findOrFail($order_id);
+
+            $order->update([
+                'runner_status' => 'delivered',
+                'status' => 'completed',
+            ]);
+
+            return $order;
+        });
+
+        return $this->successResponse(
+            $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
+            'Order marked as completed successfully.',
+            200
+        );
+    }
 }

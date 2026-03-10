@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Api\Order;
 
+use App\Traits\LocationTrait;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreOrderRequest extends FormRequest
 {
+    use LocationTrait;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -17,6 +20,9 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Location fields
+            ...$this->getLocationValidationRules(),
+
             // Order base fields
             'name' => 'nullable|string|max:255',
             'details' => 'nullable|string',
@@ -42,6 +48,13 @@ class StoreOrderRequest extends FormRequest
             'island_id' => 'required_if:type,ferry_drops|exists:islands,id',
             'drop_fee' => 'required_if:type,ferry_drops|numeric',
             'package_fee' => 'required_if:type,ferry_drops|numeric',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            ...$this->getLocationValidationMessages(),
         ];
     }
 }

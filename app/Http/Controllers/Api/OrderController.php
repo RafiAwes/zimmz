@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\{Auth, DB};
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Order\StoreOrderRequest;
-use App\Http\Requests\Api\Order\UpdateOrderRequest;
-use App\Models\FerryDrop;
-use App\Models\FoodDelivery;
-use App\Models\Order;
-use App\Traits\ApiResponseTraits;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Http\Requests\Api\Order\{StoreOrderRequest, UpdateOrderRequest};
+use App\Models\{FerryDrop, FoodDelivery, Order};
+use App\Traits\{ApiResponseTraits, LocationTrait};
 
 class OrderController extends Controller
 {
     use ApiResponseTraits;
+    use LocationTrait;
 
     public function getAll(Request $request): JsonResponse
     {
@@ -45,7 +41,9 @@ class OrderController extends Controller
 
     public function create(StoreOrderRequest $request): JsonResponse
     {
-        $order = DB::transaction(function () use ($request) {
+        $locationData = $this->getLocationData($request->validated());
+
+        $order = DB::transaction(function () use ($request, $locationData) {
             $order = Order::create([
                 'user_id' => Auth::id() ?? 1, // Fallback for testing if no auth
                 'name' => $request->name,
@@ -55,6 +53,8 @@ class OrderController extends Controller
                 'total_cost' => $request->total_cost,
                 'drop_location' => $request->drop_location,
                 'type' => $request->type,
+                'lat' => $locationData['lat'],
+                'long' => $locationData['long'],
                 'files' => $this->handleFileUploads($request),
             ]);
 
@@ -96,15 +96,25 @@ class OrderController extends Controller
     public function update(UpdateOrderRequest $request, $id): JsonResponse
     {
         $order = Order::findOrFail($id);
-        $order = DB::transaction(function () use ($request, $order) {
-            $order->update($request->only([
-                'name',
-                'status',
-                'details',
-                'time',
-                'total_cost',
-                'drop_location',
-            ]));
+        $locationData = array_filter(
+            $this->getLocationData($request->validated()),
+            fn ($value) => $value !== null,
+        );
+
+        $order = DB::transaction(function () use ($request, $order, $locationData) {
+            $orderData = array_merge(
+                $request->only([
+                    'name',
+                    'status',
+                    'details',
+                    'time',
+                    'total_cost',
+                    'drop_location',
+                ]),
+                $locationData,
+            );
+
+            $order->update($orderData);
 
             if ($request->hasFile('files')) {
                 $existingFiles = $order->files ?? [];
