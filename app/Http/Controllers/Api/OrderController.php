@@ -2,17 +2,25 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\{JsonResponse, Request};
-use Illuminate\Support\Facades\{Auth, DB};
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Order\{StoreOrderRequest, UpdateOrderRequest};
-use App\Models\{FerryDrop, FoodDelivery, Order};
-use App\Traits\{ApiResponseTraits, LocationTrait};
+use App\Http\Requests\Api\Order\StoreOrderRequest;
+use App\Http\Requests\Api\Order\UpdateOrderRequest;
+use App\Models\FerryDrop;
+use App\Models\FoodDelivery;
+use App\Models\Order;
+use App\Traits\ApiResponseTraits;
+use App\Traits\LocationTrait;
+use App\Traits\NotificationTrait;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
     use ApiResponseTraits;
     use LocationTrait;
+    use NotificationTrait;
 
     public function getAll(Request $request): JsonResponse
     {
@@ -87,6 +95,14 @@ class OrderController extends Controller
             return $order->load(['foodDelivery', 'ferryDrop']);
         });
 
+        // Notify all admins about new order
+        $this->notifyAdmins(
+            'New Order Created',
+            "A new {$order->type} order #{$order->id} has been placed by {$order->user->name}.",
+            'order_created',
+            $order->id
+        );
+
         return $this->successResponse($order, 'Order created successfully.', 201);
     }
 
@@ -155,6 +171,25 @@ class OrderController extends Controller
         $order->delete();
 
         return $this->successResponse(null, 'Order deleted successfully.', 200);
+    }
+
+    public function cancel(Request $request, $id): JsonResponse
+    {
+        $order = Order::findOrFail($id);
+        $order->update(['status' => 'cancelled']);
+
+        // Notify assigned runner if order is cancelled
+        if ($order->runner_id) {
+            $this->notifyUser(
+                $order->runner->user_id,
+                'Order Cancelled',
+                "Order #{$order->id} has been cancelled by the user.",
+                'order_cancelled',
+                $order->id
+            );
+        }
+
+        return $this->successResponse($order, 'Order cancelled successfully.', 200);
     }
 
     protected function handleFileUploads(Request $request): array

@@ -21,7 +21,7 @@ class UpdateOrderRequest extends FormRequest
     {
         return [
             'name' => 'nullable|string|max:255',
-            'status' => 'nullable|in:new,pending,completed',
+            'status' => 'nullable|in:new,pending,completed,cancelled',
             'details' => 'nullable|string',
             'time' => 'nullable|string',
             'total_cost' => 'nullable|numeric',

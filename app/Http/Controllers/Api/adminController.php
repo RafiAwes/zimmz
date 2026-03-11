@@ -7,12 +7,14 @@ use App\Http\Requests\Api\Order\AcceptAndAssignOrderRequest;
 use App\Models\Order;
 use App\Models\Runner;
 use App\Traits\ApiResponseTraits;
+use App\Traits\NotificationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class adminController extends Controller
 {
     use ApiResponseTraits;
+    use NotificationTrait;
 
     public function acceptAndAssign(AcceptAndAssignOrderRequest $request): JsonResponse
     {
@@ -32,6 +34,15 @@ class adminController extends Controller
 
             return $order;
         });
+
+        // Notify the assigned runner
+        $this->notifyUser(
+            $order->runner->user_id,
+            'New Order Assigned',
+            "You have been assigned to order #{$order->id}. Please review and accept or decline.",
+            'order_assigned',
+            $order->id
+        );
 
         return $this->successResponse(
             $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),

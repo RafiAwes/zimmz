@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Runner;
 use App\Models\User;
 use App\Traits\ApiResponseTraits;
+use App\Traits\NotificationTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Hash;
 class RunnerController extends Controller
 {
     use ApiResponseTraits;
+    use NotificationTrait;
 
     public function runnersList(Request $request)
     {
@@ -96,6 +98,22 @@ class RunnerController extends Controller
             return $order;
         });
 
+        // Notify admin and user who placed the order
+        $this->notifyAdmins(
+            'Order Accepted by Runner',
+            "Order #{$order->id} has been accepted by runner {$order->runner->user->name}.",
+            'order_accepted',
+            $order->id
+        );
+
+        $this->notifyUser(
+            $order->user_id,
+            'Runner Accepted Your Order',
+            "Your order #{$order->id} has been accepted by a runner and is on the way!",
+            'order_accepted',
+            $order->id
+        );
+
         return $this->successResponse(
             $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
             'Order accepted and assigned successfully.',
@@ -116,6 +134,14 @@ class RunnerController extends Controller
             return $order;
         });
 
+        // Notify admin about declined order
+        $this->notifyAdmins(
+            'Order Declined by Runner',
+            "Order #{$order->id} has been declined and needs reassignment.",
+            'order_declined',
+            $order->id
+        );
+
         return $this->successResponse(
             $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
             'Order declined successfully.',
@@ -135,6 +161,22 @@ class RunnerController extends Controller
 
             return $order;
         });
+
+        // Notify admin and user about completed order
+        $this->notifyAdmins(
+            'Order Completed',
+            "Order #{$order->id} has been marked as completed by runner {$order->runner->user->name}.",
+            'order_completed',
+            $order->id
+        );
+
+        $this->notifyUser(
+            $order->user_id,
+            'Your Order is Completed',
+            "Your order #{$order->id} has been successfully delivered!",
+            'order_completed',
+            $order->id
+        );
 
         return $this->successResponse(
             $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),

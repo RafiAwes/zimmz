@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\FerryController;
 use App\Http\Controllers\Api\GeneralController;
 use App\Http\Controllers\Api\IslandController;
 use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RestaurantController;
@@ -55,6 +56,14 @@ Route::group(['controller' => ProfileController::class, 'prefix' => 'profile', '
     Route::delete('/delete-account', 'deleteAccount');
 });
 
+Route::group(['controller' => NotificationController::class, 'prefix' => 'notifications', 'middleware' => 'auth:api'], function () {
+    Route::get('/', 'getAll');
+    Route::get('/unread-count', 'getUnreadCount');
+    Route::put('/mark-as-read/{id}', 'markAsRead');
+    Route::put('/mark-all-as-read', 'markAllAsRead');
+    Route::delete('/delete/{id}', 'delete');
+});
+
 Route::group(['controller' => IslandController::class, 'prefix' => 'island', 'middleware' => 'auth:api'], function () {
     Route::post('/create', 'create')->middleware('role.admin');
     Route::get('/get-all', 'getAll');
@@ -90,10 +99,11 @@ Route::group(['controller' => AdController::class, 'prefix' => 'ad', 'middleware
 
 Route::group(['controller' => OrderController::class, 'prefix' => 'order', 'middleware' => 'auth:api'], function () {
     Route::post('/create', 'create');
-    Route::get('/get-all', 'getAll')->middleware('role.admin');
+    Route::get('/get-all', 'getAll');
     Route::get('/details/{id}', 'details');
     Route::put('/update/{id}', 'update');
     Route::delete('/delete/{id}', 'delete');
+    Route::put('/cancel/{id}', 'cancel')->middleware('role.user');
 });
 
 Route::group(['controller' => TaskController::class, 'prefix' => 'task-service', 'middleware' => 'auth:api'], function () {

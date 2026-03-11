@@ -11,7 +11,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-
 class TaskController extends Controller
 {
     use ApiResponseTraits;
@@ -42,9 +41,23 @@ class TaskController extends Controller
         return $this->successResponse(null, 'Task service deleted successfully.', 200);
     }
 
-    public function getAll(): JsonResponse
+    public function getAll(Request $request): JsonResponse
     {
-        $taskServices = TaskService::with('user')->get();
+        $search = $request->search;
+        $status = $request->status;
+        $per_page = $request->per_page ?? 5;
+
+        $taskServices = TaskService::with('user')
+            ->when($search, function ($query, $search) {
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('task', 'like', "%{$search}%")
+                        ->orWhere('price', 'like', "%{$search}%");
+                });
+            })
+            ->when($status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->paginate($per_page);
 
         return $this->successResponse($taskServices, 'Task services fetched successfully.', 200);
     }

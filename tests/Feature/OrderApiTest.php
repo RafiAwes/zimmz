@@ -125,6 +125,23 @@ test('can delete an order', function () {
     $this->assertDatabaseMissing('orders', ['id' => $order->id]);
 });
 
+test('can cancel an order', function () {
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => 'pending',
+    ]);
+
+    $response = $this->putJson("/api/order/cancel/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.status', 'cancelled');
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $order->id,
+        'status' => 'cancelled',
+    ]);
+});
+
 test('can show order details', function () {
     $order = Order::factory()->create(['user_id' => $this->user->id]);
 

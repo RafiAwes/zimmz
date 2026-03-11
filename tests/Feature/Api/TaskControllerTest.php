@@ -25,7 +25,42 @@ test('it can fetch all task services', function () {
     $response = $this->getJson('/api/task-service/');
 
     $response->assertStatus(200)
-        ->assertJsonCount(3, 'data');
+        ->assertJsonCount(3, 'data.data');
+});
+
+test('it can filter task services by status', function () {
+    TaskService::factory()->create(['status' => 'new']);
+    TaskService::factory()->create(['status' => 'pending']);
+
+    $response = $this->getJson('/api/task-service/?status=pending');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.status', 'pending');
+});
+
+test('it can filter task services by search and status', function () {
+    $matchedTask = TaskService::factory()->create([
+        'task' => 'Airport transfer',
+        'status' => 'pending',
+    ]);
+
+    TaskService::factory()->create([
+        'task' => 'Airport transfer',
+        'status' => 'completed',
+    ]);
+
+    TaskService::factory()->create([
+        'task' => 'Buy groceries',
+        'status' => 'pending',
+    ]);
+
+    $response = $this->getJson('/api/task-service/?search=Airport&status=pending');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $matchedTask->id)
+        ->assertJsonPath('data.data.0.status', 'pending');
 });
 
 test('it can fetch task service details', function () {
