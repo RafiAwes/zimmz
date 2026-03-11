@@ -1,21 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\AdController;
-use App\Http\Controllers\Api\adminController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\FerryController;
-use App\Http\Controllers\Api\GeneralController;
-use App\Http\Controllers\Api\IslandController;
-use App\Http\Controllers\Api\MessageController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RestaurantController;
-use App\Http\Controllers\Api\RunnerController;
-use App\Http\Controllers\Api\TaskController;
-use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\{AdController, AuthController, FerryController, GeneralController, IslandController, MessageController, NotificationController, OrderController, ProfileController, RestaurantController, RunnerController, SupportMessageController, TaskController, UserController, adminController};
 
 Route::group(['controller' => GeneralController::class, 'prefix' => 'pages'], function () {
     Route::get('/{title}', 'getPage');
@@ -122,6 +109,14 @@ Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 
     Route::post('send', 'sendMessage');
     Route::get('get-messages/{userId}', 'getMessages');
     Route::put('read/{senderId}', 'markAsRead');
+});
+
+Route::group(['controller' => SupportMessageController::class, 'prefix' => 'support-messages', 'middleware' => 'auth:api'], function () {
+    Route::post('/send', 'send');
+    Route::get('/my-messages', 'myMessages');
+    Route::get('/admin/get-all', 'adminGetAll')->middleware('role.admin');
+    Route::get('/admin/details/{id}', 'adminDetails')->middleware('role.admin');
+    Route::post('/admin/reply/{id}', 'adminReply')->middleware('role.admin');
 });
 
 Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {

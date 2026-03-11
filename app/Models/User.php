@@ -125,6 +125,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Notification::class);
     }
 
+    public function supportMessages()
+    {
+        return $this->hasMany(SupportMessage::class);
+    }
+
+    public function repliedSupportMessages()
+    {
+        return $this->hasMany(SupportMessage::class, 'replied_by');
+    }
+
     public function getTotalOrdersAttribute()
     {
         return $this->orders()->count();
