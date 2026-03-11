@@ -7,6 +7,7 @@ use App\Http\Requests\Api\TaskService\TaskServiceRequest;
 use App\Models\TaskService;
 use App\Models\User;
 use App\Traits\ApiResponseTraits;
+use App\Traits\NotificationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 class TaskController extends Controller
 {
     use ApiResponseTraits;
+    use NotificationTrait;
 
     public function create(TaskServiceRequest $request): JsonResponse
     {
@@ -21,6 +23,23 @@ class TaskController extends Controller
             'user_id' => Auth::id() ?? 1,
             'status' => 'new',
         ]));
+
+        $registeredRunnerIds = User::query()
+            ->where('role', 'runner')
+            ->whereHas('runner', function ($query) {
+                $query->where('type', 'registered');
+            })
+            ->pluck('id')
+            ->all();
+
+        $creatorName = Auth::user()?->name ?? 'A user';
+
+        $this->notifyUsers(
+            $registeredRunnerIds,
+            'New Order Created',
+            "A new task service order #{$taskService->id} has been placed by {$creatorName}.",
+            'order_created'
+        );
 
         return $this->successResponse($taskService, 'Task service created successfully.', 201);
     }

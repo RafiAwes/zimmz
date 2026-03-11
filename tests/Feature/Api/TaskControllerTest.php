@@ -1,8 +1,7 @@
 <?php
 
-use App\Models\TaskService;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\{Notification, Runner, TaskService, User};
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 uses(RefreshDatabase::class);
@@ -61,6 +60,37 @@ test('it can filter task services by search and status', function () {
         ->assertJsonCount(1, 'data.data')
         ->assertJsonPath('data.data.0.id', $matchedTask->id)
         ->assertJsonPath('data.data.0.status', 'pending');
+});
+
+test('it notifies only registered runners when a task is created', function () {
+    $registeredRunnerUser = User::factory()->create(['role' => 'runner']);
+    Runner::factory()->create([
+        'user_id' => $registeredRunnerUser->id,
+        'type' => 'registered',
+    ]);
+
+    $assignedRunnerUser = User::factory()->create(['role' => 'runner']);
+    Runner::factory()->create([
+        'user_id' => $assignedRunnerUser->id,
+        'type' => 'assigned',
+    ]);
+
+    $response = $this->postJson('/api/task-service/create', [
+        'task' => 'Deliver package to harbor',
+        'price' => '50',
+    ]);
+
+    $response->assertStatus(201);
+
+    $this->assertTrue(Notification::query()
+        ->where('user_id', $registeredRunnerUser->id)
+        ->where('type', 'order_created')
+        ->exists());
+
+    $this->assertFalse(Notification::query()
+        ->where('user_id', $assignedRunnerUser->id)
+        ->where('type', 'order_created')
+        ->exists());
 });
 
 test('it can fetch task service details', function () {

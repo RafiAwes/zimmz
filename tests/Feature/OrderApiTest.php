@@ -1,10 +1,6 @@
 <?php
 
-use App\Models\Ferry;
-use App\Models\Island;
-use App\Models\Order;
-use App\Models\Restaurant;
-use App\Models\User;
+use App\Models\{Ferry, Island, Order, Restaurant, User};
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => 'user']);
@@ -43,6 +39,117 @@ test('can list orders filtered by type', function () {
     $response->assertStatus(200)
         ->assertJsonCount(1, 'data.data')
         ->assertJsonPath('data.data.0.type', 'ferry_drops');
+});
+
+test('can list orders filtered by search', function () {
+    $matchedOrder = Order::factory()->create([
+        'name' => 'Airport pickup order',
+        'user_id' => $this->user->id,
+    ]);
+
+    Order::factory()->create([
+        'name' => 'Groceries run',
+        'user_id' => $this->user->id,
+    ]);
+
+    $response = $this->getJson('/api/order/get-all?search=Airport');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $matchedOrder->id);
+});
+
+test('can search orders by restaurant and island name', function () {
+    $restaurant = Restaurant::factory()->create(['name' => 'Harbor Bites']);
+    $island = Island::factory()->create(['name' => 'Palm Island']);
+    $ferry = Ferry::factory()->create(['island_id' => $island->id]);
+
+    $foodOrder = Order::factory()->create([
+        'type' => 'food_delivery',
+        'user_id' => $this->user->id,
+    ]);
+
+    $foodOrder->foodDelivery()->create([
+        'restaurant_id' => $restaurant->id,
+        'food_cost' => 40,
+        'delivery_fee' => 5,
+        'service_fee' => 5,
+    ]);
+
+    $ferryOrder = Order::factory()->create([
+        'type' => 'ferry_drops',
+        'user_id' => $this->user->id,
+    ]);
+
+    $ferryOrder->ferryDrop()->create([
+        'pickup_location' => 'Main Pier',
+        'ferry_id' => $ferry->id,
+        'island_id' => $island->id,
+        'drop_fee' => 20,
+        'package_fee' => 10,
+    ]);
+
+    $restaurantSearchResponse = $this->getJson('/api/order/get-all?search=Harbor');
+
+    $restaurantSearchResponse->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $foodOrder->id)
+        ->assertJsonPath('data.data.0.restaurant_name', 'Harbor Bites');
+
+    $islandSearchResponse = $this->getJson('/api/order/get-all?search=Palm');
+
+    $islandSearchResponse->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $ferryOrder->id)
+        ->assertJsonPath('data.data.0.island_name', 'Palm Island');
+});
+
+test('order list includes restaurant name for food delivery', function () {
+    $restaurant = Restaurant::factory()->create(['name' => 'Harbor Bites']);
+
+    $order = Order::factory()->create([
+        'type' => 'food_delivery',
+        'user_id' => $this->user->id,
+    ]);
+
+    $order->foodDelivery()->create([
+        'restaurant_id' => $restaurant->id,
+        'food_cost' => 40,
+        'delivery_fee' => 5,
+        'service_fee' => 5,
+    ]);
+
+    $response = $this->getJson('/api/order/get-all?type=food_delivery');
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.data.0.id', $order->id)
+        ->assertJsonPath('data.data.0.restaurant_name', 'Harbor Bites')
+        ->assertJsonPath('data.data.0.island_name', null);
+});
+
+test('order list includes island name for ferry drops', function () {
+    $island = Island::factory()->create(['name' => 'Palm Island']);
+    $ferry = Ferry::factory()->create(['island_id' => $island->id]);
+
+    $order = Order::factory()->create([
+        'type' => 'ferry_drops',
+        'user_id' => $this->user->id,
+    ]);
+
+    $order->ferryDrop()->create([
+        'pickup_location' => 'Main Pier',
+        'ferry_id' => $ferry->id,
+        'island_id' => $island->id,
+        'drop_fee' => 20,
+        'package_fee' => 10,
+    ]);
+
+    $response = $this->getJson('/api/order/get-all?type=ferry_drops');
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.data.0.id', $order->id)
+        ->assertJsonPath('data.data.0.island_name', 'Palm Island')
+        ->assertJsonPath('data.data.0.restaurant_name', null);
 });
 
 test('can create food delivery order', function () {

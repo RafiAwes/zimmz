@@ -24,6 +24,7 @@ class OrderController extends Controller
 
     public function getAll(Request $request): JsonResponse
     {
+        $search = $request->input('search');
         $status = $request->input('status');
         $type = $request->input('type');
         $user_id = $request->input('user_id');
@@ -34,7 +35,11 @@ class OrderController extends Controller
         }
 
         $ordersQuery = Order::query()
-            ->with(['user', 'foodDelivery', 'ferryDrop'])
+            ->with([
+                'user',
+                'foodDelivery.restaurant:id,name',
+                'ferryDrop.island:id,name',
+            ])
             ->when($status, function ($query, $status) {
                 $query->where('status', $status);
             })
@@ -44,9 +49,41 @@ class OrderController extends Controller
             ->when($user_id, function ($query, $user_id) {
                 $query->where('user_id', $user_id);
             })
+            ->when($search, function ($query, $search) {
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('details', 'like', "%{$search}%")
+                        ->orWhere('drop_location', 'like', "%{$search}%")
+                        ->orWhereHas('foodDelivery.restaurant', function ($restaurantQuery) use ($search) {
+                            $restaurantQuery->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('ferryDrop.island', function ($islandQuery) use ($search) {
+                            $islandQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
             ->latest();
 
-        $orders = $ordersQuery->paginate($per_page);
+        $orders = $ordersQuery->paginate($per_page)
+            ->through(function (Order $order) {
+                $order->restaurant_name = $order->type === 'food_delivery'
+                    ? $order->foodDelivery?->restaurant?->name
+                    : null;
+
+                $order->island_name = $order->type === 'ferry_drops'
+                    ? $order->ferryDrop?->island?->name
+                    : null;
+
+                if ($order->foodDelivery) {
+                    $order->foodDelivery->unsetRelation('restaurant');
+                }
+
+                if ($order->ferryDrop) {
+                    $order->ferryDrop->unsetRelation('island');
+                }
+
+                return $order;
+            });
 
         return $this->successResponse($orders, 'Orders fetched successfully.', 200);
     }

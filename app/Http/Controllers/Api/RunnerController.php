@@ -2,16 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\{DB, Hash};
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreRunnerRequest;
-use App\Models\Order;
-use App\Models\Runner;
-use App\Models\User;
-use App\Traits\ApiResponseTraits;
-use App\Traits\NotificationTrait;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use App\Models\{Order, Runner, User};
+use App\Traits\{ApiResponseTraits, NotificationTrait};
 
 class RunnerController extends Controller
 {
@@ -58,6 +54,7 @@ class RunnerController extends Controller
         $per_page = $request->per_page ?? 5;
         $search = $request->search;
         $type = $request->type;
+        $category = $request->category;
 
         $runners = User::query()
             ->where('role', 'runner')
@@ -72,6 +69,11 @@ class RunnerController extends Controller
             ->when($type, function ($query, $type) {
                 $query->whereHas('runner', function ($q) use ($type) {
                     $q->where('type', $type);
+                });
+            })
+            ->when($category, function ($query, $category) {
+                $query->whereHas('runner', function ($q) use ($category) {
+                    $q->where('category', $category);
                 });
             })
             ->paginate($per_page);
