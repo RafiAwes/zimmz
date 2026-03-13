@@ -106,6 +106,8 @@ Route::group(['controller' => OrderController::class, 'prefix' => 'order', 'midd
     Route::put('/update/{id}', 'update');
     Route::delete('/delete/{id}', 'delete');
     Route::put('/cancel/{id}', 'cancel')->middleware('role.user');
+    Route::post('/approve-delivery/{id}', 'approveDelivery')->middleware('role.user');
+    Route::post('/reject-delivery/{id}', 'rejectDelivery')->middleware('role.user');
 });
 
 Route::group(['controller' => TaskController::class, 'prefix' => 'task-service', 'middleware' => 'auth:api'], function () {
@@ -152,6 +154,7 @@ Route::group(['controller' => UserController::class, 'prefix' => 'user', 'middle
 
 Route::group(['controller' => adminController::class, 'prefix' => 'admin', 'middleware' => ['auth:api', 'role.admin']], function () {
     Route::post('/accept-and-assign/{order_id}/{runner_user_id}', 'acceptAndAssign');
+    Route::post('/request-delivery/{order_id}', 'requestDelivery');
 });
 
 Route::group(['controller' => SubscriptionController::class, 'prefix' => 'subscription', 'middleware' => 'auth:api'], function () {

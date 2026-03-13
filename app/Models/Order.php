@@ -13,9 +13,11 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'runner_id',
+        'admin_status',
+        'user_status',
         'runner_status',
+        'delivery_requested',
         'name',
-        'status',
         'details',
         'time',
         'total_cost',
@@ -30,6 +32,7 @@ class Order extends Model
     {
         return [
             'files' => 'array',
+            'delivery_requested' => 'boolean',
         ];
     }
 
@@ -56,7 +59,7 @@ class Order extends Model
 
     public function runner()
     {
-        return $this->belongsTo(Runner::class);
+        return $this->belongsTo(User::class, 'runner_id');
     }
 
     public function foodDelivery()

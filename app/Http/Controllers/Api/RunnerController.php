@@ -9,7 +9,6 @@ use App\Models\Runner;
 use App\Models\User;
 use App\Traits\ApiResponseTraits;
 use App\Traits\NotificationTrait;
-use App\Traits\OrderStatusTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,14 +19,13 @@ class RunnerController extends Controller
 {
     use ApiResponseTraits;
     use NotificationTrait;
-    use OrderStatusTrait;
 
-    public function runnersList(Request $request)
+    public function runnersList(Request $request): JsonResponse
     {
         return $this->getAll($request);
     }
 
-    public function create(StoreRunnerRequest $request)
+    public function create(StoreRunnerRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -40,11 +38,11 @@ class RunnerController extends Controller
                     'contact_number' => $validated['phone'] ?? null,
                     'address' => $validated['location'] ?? null,
                     'role' => 'runner',
-                    'email_verified_at' => now(), // Default to verified since created by admin
+                    'email_verified_at' => now(),
                     'is_active' => true,
                 ]);
 
-                $runner = Runner::create([
+                Runner::create([
                     'user_id' => $user->id,
                     'category' => $validated['runner_category'],
                     'type' => $validated['runner_type'] ?? 'assigned',
@@ -57,7 +55,7 @@ class RunnerController extends Controller
         }
     }
 
-    public function getAll(Request $request)
+    public function getAll(Request $request): JsonResponse
     {
         $per_page = $request->per_page ?? 5;
         $search = $request->search;
@@ -89,7 +87,7 @@ class RunnerController extends Controller
         return $this->successResponse($runners, 'Runners fetched successfully.', 200);
     }
 
-    public function details($id)
+    public function details(int|string $id): JsonResponse
     {
         $runner = User::where('role', 'runner')->with('runner')->findOrFail($id);
 
@@ -99,30 +97,30 @@ class RunnerController extends Controller
     public function acceptOrder($order_id): JsonResponse
     {
         $runnerUser = Auth::guard('api')->user();
-        $runner = $runnerUser?->runner;
 
-        if (! $runnerUser || ! $runner) {
+        if (! $runnerUser?->runner) {
             return $this->errorResponse('Runner profile is required to accept orders.', 403);
         }
 
         $order = Order::query()->findOrFail($order_id);
 
-        if ((int) $order->runner_id !== (int) $runner->id) {
+        if ((int) $order->runner_id !== (int) $runnerUser->id) {
             return $this->errorResponse('This order is not assigned to you.', 403);
         }
 
-        if ($order->status !== 'pending' || $order->runner_status !== 'pending') {
+        if ($order->runner_status !== 'new') {
             return $this->errorResponse('Only newly assigned orders can be accepted.', 422);
         }
 
         DB::transaction(function () use ($order) {
             $order->update([
-                'status' => 'pending',
-                'runner_status' => 'assigned',
+                'admin_status' => 'pending',
+                'user_status' => 'ongoing',
+                'runner_status' => 'ongoing',
             ]);
         });
 
-        $order->refresh()->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']);
+        $order->refresh()->load(['user', 'foodDelivery', 'ferryDrop']);
 
         $this->notifyAdmins(
             'Order Accepted by Runner',
@@ -139,41 +137,39 @@ class RunnerController extends Controller
             $order->id
         );
 
-        return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $runnerUser),
-            'Order accepted and assigned successfully.',
-            200
-        );
+        $order->setAttribute('status', $order->runner_status);
+
+        return $this->successResponse($order, 'Order accepted successfully.', 200);
     }
 
     public function declineOrder($order_id): JsonResponse
     {
         $runnerUser = Auth::guard('api')->user();
-        $runner = $runnerUser?->runner;
 
-        if (! $runnerUser || ! $runner) {
+        if (! $runnerUser?->runner) {
             return $this->errorResponse('Runner profile is required to decline orders.', 403);
         }
 
         $order = Order::query()->findOrFail($order_id);
 
-        if ((int) $order->runner_id !== (int) $runner->id) {
+        if ((int) $order->runner_id !== (int) $runnerUser->id) {
             return $this->errorResponse('This order is not assigned to you.', 403);
         }
 
-        if ($order->status !== 'pending' || $order->runner_status !== 'pending') {
+        if ($order->runner_status !== 'new') {
             return $this->errorResponse('Only newly assigned orders can be declined.', 422);
         }
 
         DB::transaction(function () use ($order) {
             $order->update([
-                'status' => 'new',
-                'runner_id' => null,
+                'admin_status' => 'new',
+                'user_status' => 'pending',
                 'runner_status' => null,
+                'runner_id' => null,
             ]);
         });
 
-        $order->refresh()->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']);
+        $order->refresh()->load(['user', 'foodDelivery', 'ferryDrop']);
 
         $this->notifyAdmins(
             'Order Declined by Runner',
@@ -190,60 +186,48 @@ class RunnerController extends Controller
             $order->id
         );
 
-        return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $runnerUser),
-            'Order declined successfully.',
-            200
-        );
+        $order->setAttribute('status', $order->runner_status);
+
+        return $this->successResponse($order, 'Order declined successfully.', 200);
     }
 
     public function orderCompleted($order_id): JsonResponse
     {
         $runnerUser = Auth::guard('api')->user();
-        $runner = $runnerUser?->runner;
 
-        if (! $runnerUser || ! $runner) {
+        if (! $runnerUser?->runner) {
             return $this->errorResponse('Runner profile is required to complete orders.', 403);
         }
 
         $order = Order::query()->findOrFail($order_id);
 
-        if ((int) $order->runner_id !== (int) $runner->id) {
+        if ((int) $order->runner_id !== (int) $runnerUser->id) {
             return $this->errorResponse('This order is not assigned to you.', 403);
         }
 
-        if ($order->status !== 'pending' || $order->runner_status !== 'assigned') {
+        if ($order->runner_status !== 'ongoing') {
             return $this->errorResponse('Only ongoing orders can be completed.', 422);
         }
 
         DB::transaction(function () use ($order) {
             $order->update([
-                'runner_status' => 'delivered',
-                'status' => 'completed',
+                'runner_status' => 'completed',
+                'user_status' => 'pending',
+                'delivery_requested' => true,
             ]);
         });
 
-        $order->refresh()->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']);
+        $order->refresh()->load(['user', 'foodDelivery', 'ferryDrop']);
 
         $this->notifyAdmins(
-            'Order Completed',
-            "Order #{$order->id} has been marked as completed by runner {$runnerUser->name}.",
+            'Order Completed by Runner',
+            "Runner {$runnerUser->name} has completed order #{$order->id}. Please request delivery confirmation from the user.",
             'order_completed',
             $order->id
         );
 
-        $this->notifyUser(
-            $order->user_id,
-            'Confirm Order Completion',
-            "Runner marked order #{$order->id} as completed. Please review and confirm completion.",
-            'order_completion_confirmation',
-            $order->id
-        );
+        $order->setAttribute('status', $order->runner_status);
 
-        return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $runnerUser),
-            'Order marked as completed successfully.',
-            200
-        );
+        return $this->successResponse($order, 'Order marked as completed. Admin will confirm delivery with user.', 200);
     }
 }

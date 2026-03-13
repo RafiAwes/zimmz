@@ -19,7 +19,10 @@ class OrderFactory extends Factory
         return [
             'user_id' => \App\Models\User::factory(),
             'name' => $this->faker->name(),
-            'status' => $this->faker->randomElement(['new', 'pending', 'completed']),
+            'admin_status' => 'new',
+            'user_status' => 'pending',
+            'runner_status' => null,
+            'delivery_requested' => false,
             'details' => $this->faker->sentence(),
             'time' => $this->faker->time(),
             'total_cost' => $this->faker->randomFloat(2, 10, 500),

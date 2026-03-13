@@ -14,8 +14,8 @@ beforeEach(function () {
 });
 
 test('user sees pending for new and pending orders when status filter is not provided', function () {
-    Order::factory()->create(['status' => 'new', 'user_id' => $this->user->id]);
-    Order::factory()->create(['status' => 'pending', 'user_id' => $this->user->id]);
+    Order::factory()->create(['admin_status' => 'new', 'user_status' => 'pending', 'user_id' => $this->user->id]);
+    Order::factory()->create(['admin_status' => 'pending', 'user_status' => 'pending', 'user_id' => $this->user->id]);
 
     $response = $this->getJson('/api/order/get-all');
 
@@ -31,7 +31,8 @@ test('admin sees internal new status for unassigned new order', function () {
 
     $order = Order::factory()->create([
         'user_id' => $this->user->id,
-        'status' => 'new',
+        'admin_status' => 'new',
+        'user_status' => 'pending',
         'runner_id' => null,
         'runner_status' => null,
     ]);
@@ -46,13 +47,14 @@ test('admin sees internal new status for unassigned new order', function () {
 test('assigned runner sees new status before accepting order', function () {
     $runnerUser = User::factory()->create(['role' => 'runner']);
     $runnerToken = \PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::fromUser($runnerUser);
-    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+    Runner::factory()->create(['user_id' => $runnerUser->id]);
 
     $order = Order::factory()->create([
         'user_id' => $this->user->id,
-        'status' => 'pending',
-        'runner_id' => $runner->id,
-        'runner_status' => 'pending',
+        'admin_status' => 'pending',
+        'user_status' => 'pending',
+        'runner_status' => 'new',
+        'runner_id' => $runnerUser->id,
     ]);
 
     $response = $this->withHeader('Authorization', 'Bearer '.$runnerToken)
@@ -63,9 +65,10 @@ test('assigned runner sees new status before accepting order', function () {
 });
 
 test('user can filter pending orders and receives mapped pending status', function () {
-    Order::factory()->count(2)->create(['status' => 'new', 'user_id' => $this->user->id]);
-    Order::factory()->create(['status' => 'pending', 'runner_status' => 'pending', 'user_id' => $this->user->id]);
-    Order::factory()->create(['status' => 'pending', 'runner_status' => 'assigned', 'user_id' => $this->user->id]);
+    Order::factory()->count(2)->create(['admin_status' => 'new', 'user_status' => 'pending', 'user_id' => $this->user->id]);
+    Order::factory()->create(['admin_status' => 'pending', 'user_status' => 'pending', 'runner_status' => 'new', 'user_id' => $this->user->id]);
+    // This order has ongoing user_status, should NOT appear in pending filter
+    Order::factory()->create(['admin_status' => 'pending', 'user_status' => 'ongoing', 'runner_status' => 'ongoing', 'user_id' => $this->user->id]);
 
     $response = $this->getJson('/api/order/get-all?status=pending');
 
@@ -76,18 +79,20 @@ test('user can filter pending orders and receives mapped pending status', functi
 
 test('user can filter ongoing orders after runner accepts', function () {
     $runnerUser = User::factory()->create(['role' => 'runner']);
-    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+    Runner::factory()->create(['user_id' => $runnerUser->id]);
 
     $ongoingOrder = Order::factory()->create([
         'user_id' => $this->user->id,
-        'status' => 'pending',
-        'runner_id' => $runner->id,
-        'runner_status' => 'assigned',
+        'admin_status' => 'pending',
+        'user_status' => 'ongoing',
+        'runner_status' => 'ongoing',
+        'runner_id' => $runnerUser->id,
     ]);
 
     Order::factory()->create([
         'user_id' => $this->user->id,
-        'status' => 'new',
+        'admin_status' => 'new',
+        'user_status' => 'pending',
     ]);
 
     $response = $this->getJson('/api/order/get-all?status=ongoing');
@@ -244,7 +249,7 @@ test('can create food delivery order', function () {
         ->assertJsonPath('data.type', 'food_delivery')
         ->assertJsonPath('data.status', 'pending');
 
-    $this->assertDatabaseHas('orders', ['name' => 'John Doe', 'status' => 'new']);
+    $this->assertDatabaseHas('orders', ['name' => 'John Doe', 'admin_status' => 'new', 'user_status' => 'pending']);
     $this->assertDatabaseHas('food_deliveries', ['restaurant_id' => $restaurant->id]);
 });
 
@@ -272,7 +277,7 @@ test('can create ferry drop order', function () {
         ->assertJsonPath('data.type', 'ferry_drops')
         ->assertJsonPath('data.status', 'pending');
 
-    $this->assertDatabaseHas('orders', ['name' => 'Island Package', 'status' => 'new']);
+    $this->assertDatabaseHas('orders', ['name' => 'Island Package', 'admin_status' => 'new', 'user_status' => 'pending']);
     $this->assertDatabaseHas('ferry_drops', ['ferry_id' => $ferry->id]);
 });
 
@@ -287,14 +292,13 @@ test('can update an order', function () {
 
     $response = $this->putJson("/api/order/update/{$order->id}", [
         'name' => 'Updated Name',
-        'status' => 'pending',
     ]);
 
     $response->assertStatus(200)
         ->assertJsonPath('data.name', 'Updated Name')
         ->assertJsonPath('data.status', 'pending');
 
-    $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'pending']);
+    $this->assertDatabaseHas('orders', ['id' => $order->id, 'user_status' => 'pending']);
 });
 
 test('can delete an order', function () {
@@ -309,7 +313,8 @@ test('can delete an order', function () {
 test('can cancel an order', function () {
     $order = Order::factory()->create([
         'user_id' => $this->user->id,
-        'status' => 'pending',
+        'admin_status' => 'pending',
+        'user_status' => 'pending',
     ]);
 
     $response = $this->putJson("/api/order/cancel/{$order->id}");
@@ -319,12 +324,13 @@ test('can cancel an order', function () {
 
     $this->assertDatabaseHas('orders', [
         'id' => $order->id,
-        'status' => 'cancelled',
+        'admin_status' => 'cancelled',
+        'user_status' => 'cancelled',
     ]);
 });
 
 test('can show order details', function () {
-    $order = Order::factory()->create(['user_id' => $this->user->id, 'status' => 'new']);
+    $order = Order::factory()->create(['user_id' => $this->user->id, 'admin_status' => 'new', 'user_status' => 'pending']);
 
     $response = $this->getJson("/api/order/details/{$order->id}");
 
@@ -384,4 +390,88 @@ test('can update order with more files', function () {
     $response->assertStatus(200);
     $this->assertCount(2, $response->json('data.files'));
     $this->assertTrue(collect($response->json('data.files'))->contains(fn ($url) => str_ends_with($url, 'orders/old.jpg')));
+});
+
+test('user can approve delivery when status is pending_approval', function () {
+    $adminUser = User::factory()->create(['role' => 'admin']);
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'admin_status' => 'pending',
+        'user_status' => 'pending_approval',
+        'runner_status' => 'completed',
+        'delivery_requested' => true,
+    ]);
+
+    $response = $this->postJson("/api/order/approve-delivery/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.status', 'completed');
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $order->id,
+        'admin_status' => 'completed',
+        'user_status' => 'completed',
+        'runner_status' => 'completed',
+        'delivery_requested' => false,
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $adminUser->id,
+        'type' => 'delivery_approved',
+        'related_id' => $order->id,
+    ]);
+});
+
+test('user can reject delivery when status is pending_approval', function () {
+    $adminUser = User::factory()->create(['role' => 'admin']);
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'admin_status' => 'pending',
+        'user_status' => 'pending_approval',
+        'runner_status' => 'completed',
+        'delivery_requested' => true,
+    ]);
+
+    $response = $this->postJson("/api/order/reject-delivery/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.status', 'pending');
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $order->id,
+        'admin_status' => 'pending',
+        'user_status' => 'pending',
+        'delivery_requested' => true,
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $adminUser->id,
+        'type' => 'delivery_rejected',
+        'related_id' => $order->id,
+    ]);
+});
+
+test('approve delivery fails if order is not pending_approval', function () {
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'user_status' => 'ongoing',
+    ]);
+
+    $response = $this->postJson("/api/order/approve-delivery/{$order->id}");
+
+    $response->assertStatus(422);
+});
+
+test('non owner cannot approve delivery', function () {
+    $otherUser = User::factory()->create(['role' => 'user']);
+    $order = Order::factory()->create([
+        'user_id' => $otherUser->id,
+        'user_status' => 'pending_approval',
+    ]);
+
+    $response = $this->postJson("/api/order/approve-delivery/{$order->id}");
+
+    $response->assertStatus(403);
 });

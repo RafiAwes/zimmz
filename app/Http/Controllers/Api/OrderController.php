@@ -2,27 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\{Auth, DB};
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Order\StoreOrderRequest;
-use App\Http\Requests\Api\Order\UpdateOrderRequest;
-use App\Models\FerryDrop;
-use App\Models\FoodDelivery;
-use App\Models\Order;
-use App\Traits\ApiResponseTraits;
-use App\Traits\LocationTrait;
-use App\Traits\NotificationTrait;
-use App\Traits\OrderStatusTrait;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Http\Requests\Api\Order\{StoreOrderRequest, UpdateOrderRequest};
+use App\Models\{FerryDrop, FoodDelivery, Order};
+use App\Traits\{ApiResponseTraits, LocationTrait, NotificationTrait};
 
 class OrderController extends Controller
 {
     use ApiResponseTraits;
     use LocationTrait;
     use NotificationTrait;
-    use OrderStatusTrait;
 
     public function getAll(Request $request): JsonResponse
     {
@@ -31,11 +22,14 @@ class OrderController extends Controller
         $status = $request->input('status');
         $type = $request->input('type');
         $user_id = $request->input('user_id');
+        $runner_id = $request->input('runner_id');
         $per_page = $request->input('per_page', 10);
 
         if ($type === 'ferry_drop') {
             $type = 'ferry_drops';
         }
+
+        $statusColumn = $this->statusColumnForRole($viewer?->role);
 
         $ordersQuery = Order::query()
             ->with([
@@ -43,14 +37,20 @@ class OrderController extends Controller
                 'foodDelivery.restaurant:id,name',
                 'ferryDrop.island:id,name',
             ])
-            ->when($status, function ($query, $status) use ($viewer) {
-                $this->applyRoleAwareStatusFilterToQuery($query, $status, $viewer);
+            ->when($viewer?->role === 'runner', function ($query) use ($viewer) {
+                $query->where('runner_id', $viewer->id);
+            })
+            ->when($status, function ($query) use ($status, $statusColumn) {
+                $query->where($statusColumn, $status);
             })
             ->when($type, function ($query, $type) {
                 $query->where('type', $type);
             })
             ->when($user_id, function ($query, $user_id) {
                 $query->where('user_id', $user_id);
+            })
+            ->when($runner_id, function ($query, $runner_id) {
+                $query->where('runner_id', $runner_id);
             })
             ->when($search, function ($query, $search) {
                 $query->where(function ($searchQuery) use ($search) {
@@ -85,7 +85,7 @@ class OrderController extends Controller
                     $order->ferryDrop->unsetRelation('island');
                 }
 
-                return $this->applyRoleAwareStatusToOrder($order, $viewer);
+                return $this->exposeStatusForRole($order, $viewer?->role);
             });
 
         return $this->successResponse($orders, 'Orders fetched successfully.', 200);
@@ -98,9 +98,12 @@ class OrderController extends Controller
 
         $order = DB::transaction(function () use ($request, $locationData) {
             $order = Order::create([
-                'user_id' => Auth::id() ?? 1, // Fallback for testing if no auth
+                'user_id' => Auth::id() ?? 1,
                 'name' => $request->name,
-                'status' => 'new',
+                'admin_status' => 'new',
+                'user_status' => 'pending',
+                'runner_status' => null,
+                'delivery_requested' => false,
                 'details' => $request->details,
                 'time' => $request->time,
                 'total_cost' => $request->total_cost,
@@ -136,7 +139,6 @@ class OrderController extends Controller
             return $order->load(['foodDelivery', 'ferryDrop']);
         });
 
-        // Notify all admins about new order
         $this->notifyAdmins(
             'New Order Created',
             "A new {$order->type} order #{$order->id} has been placed by {$order->user->name}.",
@@ -145,7 +147,7 @@ class OrderController extends Controller
         );
 
         return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            $this->exposeStatusForRole($order, $viewer?->role),
             'Order created successfully.',
             201
         );
@@ -157,7 +159,7 @@ class OrderController extends Controller
         $order = Order::with(['user', 'foodDelivery', 'ferryDrop'])->findOrFail($id);
 
         return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            $this->exposeStatusForRole($order, $viewer?->role),
             'Order details fetched successfully.',
             200
         );
@@ -176,7 +178,6 @@ class OrderController extends Controller
             $orderData = array_merge(
                 $request->only([
                     'name',
-                    'status',
                     'details',
                     'time',
                     'total_cost',
@@ -214,7 +215,7 @@ class OrderController extends Controller
         });
 
         return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            $this->exposeStatusForRole($order, $viewer?->role),
             'Order updated successfully.',
             200
         );
@@ -232,12 +233,16 @@ class OrderController extends Controller
     {
         $viewer = Auth::guard('api')->user();
         $order = Order::findOrFail($id);
-        $order->update(['status' => 'cancelled']);
 
-        // Notify assigned runner if order is cancelled
+        $order->update([
+            'admin_status' => 'cancelled',
+            'user_status' => 'cancelled',
+            'runner_status' => $order->runner_id ? 'cancelled' : null,
+        ]);
+
         if ($order->runner_id) {
             $this->notifyUser(
-                $order->runner->user_id,
+                $order->runner_id,
                 'Order Cancelled',
                 "Order #{$order->id} has been cancelled by the user.",
                 'order_cancelled',
@@ -245,11 +250,110 @@ class OrderController extends Controller
             );
         }
 
+        $order->refresh();
+
         return $this->successResponse(
-            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            $this->exposeStatusForRole($order, $viewer?->role),
             'Order cancelled successfully.',
             200
         );
+    }
+
+    public function approveDelivery($id): JsonResponse
+    {
+        $viewer = Auth::guard('api')->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $viewer->id) {
+            return $this->errorResponse('You are not authorized to approve this order.', 403);
+        }
+
+        if ($order->user_status !== 'pending_approval') {
+            return $this->errorResponse('This order is not awaiting your approval.', 422);
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->update([
+                'admin_status' => 'completed',
+                'user_status' => 'completed',
+                'runner_status' => 'completed',
+                'delivery_requested' => false,
+            ]);
+        });
+
+        $order->refresh();
+
+        $this->notifyAdmins(
+            'Delivery Approved',
+            "User has approved the delivery for order #{$order->id}. Order is now complete.",
+            'delivery_approved',
+            $order->id
+        );
+
+        return $this->successResponse(
+            $this->exposeStatusForRole($order, $viewer?->role),
+            'Delivery approved. Order completed.',
+            200
+        );
+    }
+
+    public function rejectDelivery($id): JsonResponse
+    {
+        $viewer = Auth::guard('api')->user();
+        $order = Order::findOrFail($id);
+
+        if ($order->user_id !== $viewer->id) {
+            return $this->errorResponse('You are not authorized to reject this order.', 403);
+        }
+
+        if ($order->user_status !== 'pending_approval') {
+            return $this->errorResponse('This order is not awaiting your approval.', 422);
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->update([
+                'admin_status' => 'pending',
+                'user_status' => 'pending',
+                'delivery_requested' => true,
+            ]);
+        });
+
+        $order->refresh();
+
+        $this->notifyAdmins(
+            'Delivery Rejected',
+            "User rejected the delivery for order #{$order->id}. Please follow up.",
+            'delivery_rejected',
+            $order->id
+        );
+
+        return $this->successResponse(
+            $this->exposeStatusForRole($order, $viewer?->role),
+            'Delivery rejected. Admin has been notified.',
+            200
+        );
+    }
+
+    protected function statusColumnForRole(?string $role): string
+    {
+        return match ($role) {
+            'admin' => 'admin_status',
+            'runner' => 'runner_status',
+            default => 'user_status',
+        };
+    }
+
+    protected function exposeStatusForRole(Order $order, ?string $role): Order
+    {
+        $status = match ($role) {
+            'admin' => $order->admin_status,
+            'runner' => $order->runner_status,
+            default => $order->user_status,
+        };
+
+        $order->setAttribute('status', $status);
+
+        return $order;
     }
 
     protected function handleFileUploads(Request $request): array
