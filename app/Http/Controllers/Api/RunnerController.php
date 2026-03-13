@@ -2,17 +2,25 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{DB, Hash};
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreRunnerRequest;
-use App\Models\{Order, Runner, User};
-use App\Traits\{ApiResponseTraits, NotificationTrait};
+use App\Models\Order;
+use App\Models\Runner;
+use App\Models\User;
+use App\Traits\ApiResponseTraits;
+use App\Traits\NotificationTrait;
+use App\Traits\OrderStatusTrait;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class RunnerController extends Controller
 {
     use ApiResponseTraits;
     use NotificationTrait;
+    use OrderStatusTrait;
 
     public function runnersList(Request $request)
     {
@@ -88,22 +96,37 @@ class RunnerController extends Controller
         return $this->successResponse($runner, 'Runner details fetched successfully.', 200);
     }
 
-    public function acceptOrder($order_id)
+    public function acceptOrder($order_id): JsonResponse
     {
-        $order = DB::transaction(function () use ($order_id) {
-            $order = Order::query()->findOrFail($order_id);
+        $runnerUser = Auth::guard('api')->user();
+        $runner = $runnerUser?->runner;
 
+        if (! $runnerUser || ! $runner) {
+            return $this->errorResponse('Runner profile is required to accept orders.', 403);
+        }
+
+        $order = Order::query()->findOrFail($order_id);
+
+        if ((int) $order->runner_id !== (int) $runner->id) {
+            return $this->errorResponse('This order is not assigned to you.', 403);
+        }
+
+        if ($order->status !== 'pending' || $order->runner_status !== 'pending') {
+            return $this->errorResponse('Only newly assigned orders can be accepted.', 422);
+        }
+
+        DB::transaction(function () use ($order) {
             $order->update([
+                'status' => 'pending',
                 'runner_status' => 'assigned',
             ]);
-
-            return $order;
         });
 
-        // Notify admin and user who placed the order
+        $order->refresh()->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']);
+
         $this->notifyAdmins(
             'Order Accepted by Runner',
-            "Order #{$order->id} has been accepted by runner {$order->runner->user->name}.",
+            "Order #{$order->id} has been accepted by runner {$runnerUser->name}.",
             'order_accepted',
             $order->id
         );
@@ -117,26 +140,41 @@ class RunnerController extends Controller
         );
 
         return $this->successResponse(
-            $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
+            $this->applyRoleAwareStatusToOrder($order, $runnerUser),
             'Order accepted and assigned successfully.',
             200
         );
     }
 
-    public function declineOrder($order_id)
+    public function declineOrder($order_id): JsonResponse
     {
-        $order = DB::transaction(function () use ($order_id) {
-            $order = Order::query()->findOrFail($order_id);
+        $runnerUser = Auth::guard('api')->user();
+        $runner = $runnerUser?->runner;
 
+        if (! $runnerUser || ! $runner) {
+            return $this->errorResponse('Runner profile is required to decline orders.', 403);
+        }
+
+        $order = Order::query()->findOrFail($order_id);
+
+        if ((int) $order->runner_id !== (int) $runner->id) {
+            return $this->errorResponse('This order is not assigned to you.', 403);
+        }
+
+        if ($order->status !== 'pending' || $order->runner_status !== 'pending') {
+            return $this->errorResponse('Only newly assigned orders can be declined.', 422);
+        }
+
+        DB::transaction(function () use ($order) {
             $order->update([
+                'status' => 'new',
                 'runner_id' => null,
                 'runner_status' => null,
             ]);
-
-            return $order;
         });
 
-        // Notify admin about declined order
+        $order->refresh()->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']);
+
         $this->notifyAdmins(
             'Order Declined by Runner',
             "Order #{$order->id} has been declined and needs reassignment.",
@@ -144,44 +182,66 @@ class RunnerController extends Controller
             $order->id
         );
 
+        $this->notifyUser(
+            $order->user_id,
+            'Order Reassignment In Progress',
+            "Order #{$order->id} is pending reassignment after the assigned runner declined it.",
+            'order_declined',
+            $order->id
+        );
+
         return $this->successResponse(
-            $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
+            $this->applyRoleAwareStatusToOrder($order, $runnerUser),
             'Order declined successfully.',
             200
         );
     }
 
-    public function orderCompleted($order_id)
+    public function orderCompleted($order_id): JsonResponse
     {
-        $order = DB::transaction(function () use ($order_id) {
-            $order = Order::query()->findOrFail($order_id);
+        $runnerUser = Auth::guard('api')->user();
+        $runner = $runnerUser?->runner;
 
+        if (! $runnerUser || ! $runner) {
+            return $this->errorResponse('Runner profile is required to complete orders.', 403);
+        }
+
+        $order = Order::query()->findOrFail($order_id);
+
+        if ((int) $order->runner_id !== (int) $runner->id) {
+            return $this->errorResponse('This order is not assigned to you.', 403);
+        }
+
+        if ($order->status !== 'pending' || $order->runner_status !== 'assigned') {
+            return $this->errorResponse('Only ongoing orders can be completed.', 422);
+        }
+
+        DB::transaction(function () use ($order) {
             $order->update([
                 'runner_status' => 'delivered',
                 'status' => 'completed',
             ]);
-
-            return $order;
         });
 
-        // Notify admin and user about completed order
+        $order->refresh()->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']);
+
         $this->notifyAdmins(
             'Order Completed',
-            "Order #{$order->id} has been marked as completed by runner {$order->runner->user->name}.",
+            "Order #{$order->id} has been marked as completed by runner {$runnerUser->name}.",
             'order_completed',
             $order->id
         );
 
         $this->notifyUser(
             $order->user_id,
-            'Your Order is Completed',
-            "Your order #{$order->id} has been successfully delivered!",
-            'order_completed',
+            'Confirm Order Completion',
+            "Runner marked order #{$order->id} as completed. Please review and confirm completion.",
+            'order_completion_confirmation',
             $order->id
         );
 
         return $this->successResponse(
-            $order->load(['user', 'runner.user', 'foodDelivery', 'ferryDrop']),
+            $this->applyRoleAwareStatusToOrder($order, $runnerUser),
             'Order marked as completed successfully.',
             200
         );

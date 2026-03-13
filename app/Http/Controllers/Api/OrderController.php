@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Traits\ApiResponseTraits;
 use App\Traits\LocationTrait;
 use App\Traits\NotificationTrait;
+use App\Traits\OrderStatusTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,9 +22,11 @@ class OrderController extends Controller
     use ApiResponseTraits;
     use LocationTrait;
     use NotificationTrait;
+    use OrderStatusTrait;
 
     public function getAll(Request $request): JsonResponse
     {
+        $viewer = Auth::guard('api')->user();
         $search = $request->input('search');
         $status = $request->input('status');
         $type = $request->input('type');
@@ -40,8 +43,8 @@ class OrderController extends Controller
                 'foodDelivery.restaurant:id,name',
                 'ferryDrop.island:id,name',
             ])
-            ->when($status, function ($query, $status) {
-                $query->where('status', $status);
+            ->when($status, function ($query, $status) use ($viewer) {
+                $this->applyRoleAwareStatusFilterToQuery($query, $status, $viewer);
             })
             ->when($type, function ($query, $type) {
                 $query->where('type', $type);
@@ -65,7 +68,7 @@ class OrderController extends Controller
             ->latest();
 
         $orders = $ordersQuery->paginate($per_page)
-            ->through(function (Order $order) {
+            ->through(function (Order $order) use ($viewer) {
                 $order->restaurant_name = $order->type === 'food_delivery'
                     ? $order->foodDelivery?->restaurant?->name
                     : null;
@@ -82,7 +85,7 @@ class OrderController extends Controller
                     $order->ferryDrop->unsetRelation('island');
                 }
 
-                return $order;
+                return $this->applyRoleAwareStatusToOrder($order, $viewer);
             });
 
         return $this->successResponse($orders, 'Orders fetched successfully.', 200);
@@ -90,6 +93,7 @@ class OrderController extends Controller
 
     public function create(StoreOrderRequest $request): JsonResponse
     {
+        $viewer = Auth::guard('api')->user();
         $locationData = $this->getLocationData($request->validated());
 
         $order = DB::transaction(function () use ($request, $locationData) {
@@ -140,18 +144,28 @@ class OrderController extends Controller
             $order->id
         );
 
-        return $this->successResponse($order, 'Order created successfully.', 201);
+        return $this->successResponse(
+            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            'Order created successfully.',
+            201
+        );
     }
 
     public function details(Request $request, $id): JsonResponse
     {
+        $viewer = Auth::guard('api')->user();
         $order = Order::with(['user', 'foodDelivery', 'ferryDrop'])->findOrFail($id);
 
-        return $this->successResponse($order, 'Order details fetched successfully.', 200);
+        return $this->successResponse(
+            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            'Order details fetched successfully.',
+            200
+        );
     }
 
     public function update(UpdateOrderRequest $request, $id): JsonResponse
     {
+        $viewer = Auth::guard('api')->user();
         $order = Order::findOrFail($id);
         $locationData = array_filter(
             $this->getLocationData($request->validated()),
@@ -199,7 +213,11 @@ class OrderController extends Controller
             return $order->load(['foodDelivery', 'ferryDrop']);
         });
 
-        return $this->successResponse($order, 'Order updated successfully.', 200);
+        return $this->successResponse(
+            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            'Order updated successfully.',
+            200
+        );
     }
 
     public function delete(Request $request, $id): JsonResponse
@@ -212,6 +230,7 @@ class OrderController extends Controller
 
     public function cancel(Request $request, $id): JsonResponse
     {
+        $viewer = Auth::guard('api')->user();
         $order = Order::findOrFail($id);
         $order->update(['status' => 'cancelled']);
 
@@ -226,7 +245,11 @@ class OrderController extends Controller
             );
         }
 
-        return $this->successResponse($order, 'Order cancelled successfully.', 200);
+        return $this->successResponse(
+            $this->applyRoleAwareStatusToOrder($order, $viewer),
+            'Order cancelled successfully.',
+            200
+        );
     }
 
     protected function handleFileUploads(Request $request): array

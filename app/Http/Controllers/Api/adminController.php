@@ -10,6 +10,7 @@ use App\Traits\ApiResponseTraits;
 use App\Traits\NotificationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class adminController extends Controller
 {
@@ -23,11 +24,18 @@ class adminController extends Controller
         $order = DB::transaction(function () use ($validated) {
             $order = Order::query()->findOrFail($validated['order_id']);
 
+            if (in_array($order->status, ['completed', 'cancelled'], true)) {
+                throw ValidationException::withMessages([
+                    'order_id' => 'This order can no longer be assigned.',
+                ]);
+            }
+
             $runner = Runner::query()
                 ->where('user_id', $validated['runner_user_id'])
                 ->firstOrFail();
 
             $order->update([
+                'status' => 'pending',
                 'runner_id' => $runner->id,
                 'runner_status' => 'pending',
             ]);

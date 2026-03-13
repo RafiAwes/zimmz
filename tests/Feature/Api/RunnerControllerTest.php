@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\Order;
+use App\Models\Runner;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\{Order, Runner, User};
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 uses(RefreshDatabase::class);
@@ -79,8 +81,11 @@ test('runner can decline order and clear assignment', function () {
     $token = JWTAuth::fromUser($runnerUser);
 
     $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+    $orderOwner = User::factory()->create(['role' => 'user']);
 
     $order = Order::factory()->create([
+        'user_id' => $orderOwner->id,
+        'status' => 'pending',
         'runner_id' => $runner->id,
         'runner_status' => 'pending',
     ]);
@@ -91,14 +96,103 @@ test('runner can decline order and clear assignment', function () {
     $response->assertStatus(200)
         ->assertJsonPath('success', true)
         ->assertJsonPath('data.id', $order->id)
+        ->assertJsonPath('data.status', 'new')
         ->assertJsonPath('data.runner_id', null)
         ->assertJsonPath('data.runner_status', null);
 
     $this->assertDatabaseHas('orders', [
         'id' => $order->id,
+        'status' => 'new',
         'runner_id' => null,
         'runner_status' => null,
     ]);
+});
+
+test('runner can accept assigned order and sees ongoing status', function () {
+    $runnerUser = User::factory()->create(['role' => 'runner']);
+    $token = JWTAuth::fromUser($runnerUser);
+
+    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+    $orderOwner = User::factory()->create(['role' => 'user']);
+
+    $order = Order::factory()->create([
+        'user_id' => $orderOwner->id,
+        'status' => 'pending',
+        'runner_id' => $runner->id,
+        'runner_status' => 'pending',
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/runner/accept-order/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.id', $order->id)
+        ->assertJsonPath('data.status', 'ongoing')
+        ->assertJsonPath('data.runner_status', 'assigned');
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $order->id,
+        'status' => 'pending',
+        'runner_id' => $runner->id,
+        'runner_status' => 'assigned',
+    ]);
+});
+
+test('runner can complete ongoing order and user gets completion confirmation notification', function () {
+    $runnerUser = User::factory()->create(['role' => 'runner']);
+    $token = JWTAuth::fromUser($runnerUser);
+
+    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+    $orderOwner = User::factory()->create(['role' => 'user']);
+
+    $order = Order::factory()->create([
+        'user_id' => $orderOwner->id,
+        'status' => 'pending',
+        'runner_id' => $runner->id,
+        'runner_status' => 'assigned',
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/runner/order-completed/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.id', $order->id)
+        ->assertJsonPath('data.status', 'completed')
+        ->assertJsonPath('data.runner_status', 'delivered');
+
+    $this->assertDatabaseHas('orders', [
+        'id' => $order->id,
+        'status' => 'completed',
+        'runner_status' => 'delivered',
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $orderOwner->id,
+        'type' => 'order_completion_confirmation',
+        'related_id' => $order->id,
+    ]);
+});
+
+test('runner cannot accept order assigned to another runner', function () {
+    $runnerUser = User::factory()->create(['role' => 'runner']);
+    $token = JWTAuth::fromUser($runnerUser);
+    Runner::factory()->create(['user_id' => $runnerUser->id]);
+
+    $otherRunnerUser = User::factory()->create(['role' => 'runner']);
+    $otherRunner = Runner::factory()->create(['user_id' => $otherRunnerUser->id]);
+    $orderOwner = User::factory()->create(['role' => 'user']);
+
+    $order = Order::factory()->create([
+        'user_id' => $orderOwner->id,
+        'status' => 'pending',
+        'runner_id' => $otherRunner->id,
+        'runner_status' => 'pending',
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/runner/accept-order/{$order->id}");
+
+    $response->assertStatus(403);
 });
 
 test('unauthenticated user cannot decline order', function () {

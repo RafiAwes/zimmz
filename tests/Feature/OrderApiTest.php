@@ -1,6 +1,11 @@
 <?php
 
-use App\Models\{Ferry, Island, Order, Restaurant, User};
+use App\Models\Ferry;
+use App\Models\Island;
+use App\Models\Order;
+use App\Models\Restaurant;
+use App\Models\Runner;
+use App\Models\User;
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => 'user']);
@@ -8,26 +13,89 @@ beforeEach(function () {
     $this->withHeader('Authorization', 'Bearer '.$this->token);
 });
 
-test('can list all statuses when status is null', function () {
-    Order::factory()->create(['status' => 'new']);
-    Order::factory()->create(['status' => 'pending']);
+test('user sees pending for new and pending orders when status filter is not provided', function () {
+    Order::factory()->create(['status' => 'new', 'user_id' => $this->user->id]);
+    Order::factory()->create(['status' => 'pending', 'user_id' => $this->user->id]);
 
     $response = $this->getJson('/api/order/get-all');
 
     $response->assertStatus(200);
     $statuses = collect($response->json('data.data'))->pluck('status');
-    $this->assertTrue($statuses->contains('new'));
     $this->assertTrue($statuses->contains('pending'));
+    $this->assertFalse($statuses->contains('new'));
 });
 
-test('can list orders filtered by status', function () {
-    Order::factory()->count(2)->create(['status' => 'new', 'user_id' => $this->user->id]);
-    Order::factory()->create(['status' => 'pending', 'user_id' => $this->user->id]);
+test('admin sees internal new status for unassigned new order', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
+    $adminToken = \PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::fromUser($admin);
 
-    $response = $this->getJson('/api/order/get-all?status=new');
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => 'new',
+        'runner_id' => null,
+        'runner_status' => null,
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$adminToken)
+        ->getJson("/api/order/details/{$order->id}");
 
     $response->assertStatus(200)
-        ->assertJsonCount(2, 'data.data');
+        ->assertJsonPath('data.status', 'new');
+});
+
+test('assigned runner sees new status before accepting order', function () {
+    $runnerUser = User::factory()->create(['role' => 'runner']);
+    $runnerToken = \PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth::fromUser($runnerUser);
+    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+
+    $order = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => 'pending',
+        'runner_id' => $runner->id,
+        'runner_status' => 'pending',
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$runnerToken)
+        ->getJson("/api/order/details/{$order->id}");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.status', 'new');
+});
+
+test('user can filter pending orders and receives mapped pending status', function () {
+    Order::factory()->count(2)->create(['status' => 'new', 'user_id' => $this->user->id]);
+    Order::factory()->create(['status' => 'pending', 'runner_status' => 'pending', 'user_id' => $this->user->id]);
+    Order::factory()->create(['status' => 'pending', 'runner_status' => 'assigned', 'user_id' => $this->user->id]);
+
+    $response = $this->getJson('/api/order/get-all?status=pending');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(3, 'data.data')
+        ->assertJsonPath('data.data.0.status', 'pending');
+});
+
+test('user can filter ongoing orders after runner accepts', function () {
+    $runnerUser = User::factory()->create(['role' => 'runner']);
+    $runner = Runner::factory()->create(['user_id' => $runnerUser->id]);
+
+    $ongoingOrder = Order::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => 'pending',
+        'runner_id' => $runner->id,
+        'runner_status' => 'assigned',
+    ]);
+
+    Order::factory()->create([
+        'user_id' => $this->user->id,
+        'status' => 'new',
+    ]);
+
+    $response = $this->getJson('/api/order/get-all?status=ongoing');
+
+    $response->assertStatus(200)
+        ->assertJsonCount(1, 'data.data')
+        ->assertJsonPath('data.data.0.id', $ongoingOrder->id)
+        ->assertJsonPath('data.data.0.status', 'ongoing');
 });
 
 test('can list orders filtered by type', function () {
@@ -161,6 +229,8 @@ test('can create food delivery order', function () {
         'time' => '12:00 PM',
         'total_cost' => 50.00,
         'drop_location' => '123 Beach Rd',
+        'lat' => '24.4539',
+        'long' => '54.3773',
         'type' => 'food_delivery',
         'restaurant_id' => $restaurant->id,
         'food_cost' => 40.00,
@@ -171,9 +241,10 @@ test('can create food delivery order', function () {
     $response = $this->postJson('/api/order/create', $payload);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.type', 'food_delivery');
+        ->assertJsonPath('data.type', 'food_delivery')
+        ->assertJsonPath('data.status', 'pending');
 
-    $this->assertDatabaseHas('orders', ['name' => 'John Doe']);
+    $this->assertDatabaseHas('orders', ['name' => 'John Doe', 'status' => 'new']);
     $this->assertDatabaseHas('food_deliveries', ['restaurant_id' => $restaurant->id]);
 });
 
@@ -185,6 +256,8 @@ test('can create ferry drop order', function () {
         'name' => 'Island Package',
         'total_cost' => 30.00,
         'drop_location' => 'Main Pier',
+        'lat' => '24.4700',
+        'long' => '54.3600',
         'type' => 'ferry_drops',
         'pickup_location' => 'Downtown Office',
         'ferry_id' => $ferry->id,
@@ -196,9 +269,10 @@ test('can create ferry drop order', function () {
     $response = $this->postJson('/api/order/create', $payload);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.type', 'ferry_drops');
+        ->assertJsonPath('data.type', 'ferry_drops')
+        ->assertJsonPath('data.status', 'pending');
 
-    $this->assertDatabaseHas('orders', ['name' => 'Island Package']);
+    $this->assertDatabaseHas('orders', ['name' => 'Island Package', 'status' => 'new']);
     $this->assertDatabaseHas('ferry_drops', ['ferry_id' => $ferry->id]);
 });
 
@@ -250,12 +324,13 @@ test('can cancel an order', function () {
 });
 
 test('can show order details', function () {
-    $order = Order::factory()->create(['user_id' => $this->user->id]);
+    $order = Order::factory()->create(['user_id' => $this->user->id, 'status' => 'new']);
 
     $response = $this->getJson("/api/order/details/{$order->id}");
 
     $response->assertStatus(200)
-        ->assertJsonPath('data.id', $order->id);
+        ->assertJsonPath('data.id', $order->id)
+        ->assertJsonPath('data.status', 'pending');
 });
 
 test('can create order with files', function () {
@@ -269,6 +344,8 @@ test('can create order with files', function () {
         'name' => 'File Order',
         'total_cost' => 50.00,
         'drop_location' => '123 Beach Rd',
+        'lat' => '24.4800',
+        'long' => '54.3500',
         'type' => 'food_delivery',
         'restaurant_id' => $restaurant->id,
         'food_cost' => 40.00,
