@@ -158,6 +158,13 @@ Route::group(['controller' => adminController::class, 'prefix' => 'admin', 'midd
 });
 
 Route::group(['controller' => SubscriptionController::class, 'prefix' => 'subscription', 'middleware' => 'auth:api'], function () {
+    Route::get('/plan', 'plan');
     Route::post('/subscribe', 'subscribe');
     Route::get('/status', 'status');
+    Route::get('/billing-portal', 'billingPortal');
+    Route::post('/cancel', 'cancel');
+    Route::post('/resume', 'resume');
+    Route::get('/invoices', 'invoices');
+    Route::get('/upcoming-invoice', 'upcomingInvoice');
+    Route::get('/invoice/{invoiceId}/download', 'downloadInvoice');
 });

@@ -28,6 +28,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'stripe' => [
+        'zimmz_plus_name' => env('STRIPE_PLUS_NAME', 'Zimmz Plus'),
+        'zimmz_plus_price_id' => env('STRIPE_PRO_PLAN_ID'),
+        'zimmz_plus_product_id' => env('STRIPE_PRODUCT_ID'),
+        'zimmz_plus_amount' => (int) env('STRIPE_PLUS_AMOUNT', 15000),
+        'zimmz_plus_currency' => env('STRIPE_PLUS_CURRENCY', env('CASHIER_CURRENCY', 'usd')),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
