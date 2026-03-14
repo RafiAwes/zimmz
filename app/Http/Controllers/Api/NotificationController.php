@@ -13,7 +13,7 @@ class NotificationController extends Controller
 {
     use ApiResponseTraits;
 
-    public function getAll(Request $request): JsonResponse
+    public function notifications(Request $request): JsonResponse
     {
         $user = Auth::guard('api')->user();
         $per_page = $request->input('per_page', 10);
@@ -31,7 +31,7 @@ class NotificationController extends Controller
         return $this->successResponse($notifications, 'Notifications fetched successfully.', 200);
     }
 
-    public function markAsRead(Request $request, $id): JsonResponse
+    public function markAsRead(Request $request, int|string $id): JsonResponse
     {
         $user = Auth::guard('api')->user();
 
@@ -47,7 +47,7 @@ class NotificationController extends Controller
         return $this->successResponse($notification, 'Notification marked as read.', 200);
     }
 
-    public function markAllAsRead(Request $request): JsonResponse
+    public function readAll(): JsonResponse
     {
         $user = Auth::guard('api')->user();
 
@@ -60,6 +60,22 @@ class NotificationController extends Controller
             ]);
 
         return $this->successResponse(null, 'All notifications marked as read.', 200);
+    }
+
+    /**
+     * Backward-compatible alias for older clients.
+     */
+    public function getAll(Request $request): JsonResponse
+    {
+        return $this->notifications($request);
+    }
+
+    /**
+     * Backward-compatible alias for older clients.
+     */
+    public function markAllAsRead(Request $request): JsonResponse
+    {
+        return $this->readAll();
     }
 
     public function getUnreadCount(Request $request): JsonResponse

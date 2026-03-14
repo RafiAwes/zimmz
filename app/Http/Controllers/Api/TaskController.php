@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\TaskService\TaskServiceRequest;
-use App\Models\TaskService;
-use App\Models\User;
-use App\Traits\ApiResponseTraits;
-use App\Traits\NotificationTrait;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\{TaskService, User};
+use App\Traits\{ApiResponseTraits, NotificationTrait};
 
 class TaskController extends Controller
 {
@@ -36,9 +33,9 @@ class TaskController extends Controller
 
         $this->notifyUsers(
             $registeredRunnerIds,
-            'New Order Created',
+            'New Task For You.',
             "A new task service order #{$taskService->id} has been placed by {$creatorName}.",
-            'order_created'
+            'task_created'
         );
 
         return $this->successResponse($taskService, 'Task service created successfully.', 201);

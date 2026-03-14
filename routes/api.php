@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AdController;
 use App\Http\Controllers\Api\adminController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\FerryController;
 use App\Http\Controllers\Api\GeneralController;
 use App\Http\Controllers\Api\IslandController;
@@ -59,10 +60,10 @@ Route::group(['controller' => ProfileController::class, 'prefix' => 'profile', '
 });
 
 Route::group(['controller' => NotificationController::class, 'prefix' => 'notifications', 'middleware' => 'auth:api'], function () {
-    Route::get('/', 'getAll');
+    Route::get('/', 'notifications');
     Route::get('/unread-count', 'getUnreadCount');
     Route::put('/mark-as-read/{id}', 'markAsRead');
-    Route::put('/mark-all-as-read', 'markAllAsRead');
+    Route::put('/mark-all-as-read', 'readAll');
     Route::delete('/delete/{id}', 'delete');
 });
 
@@ -167,4 +168,10 @@ Route::group(['controller' => SubscriptionController::class, 'prefix' => 'subscr
     Route::get('/invoices', 'invoices');
     Route::get('/upcoming-invoice', 'upcomingInvoice');
     Route::get('/invoice/{invoiceId}/download', 'downloadInvoice');
+});
+
+Route::group(['controller' => DashboardController::class, 'prefix' => 'dashboard', 'middleware' => ['auth:api', 'role.admin']], function () {
+    Route::get('/overview', 'overview');
+    Route::get('/registration-statistics', 'registrationStatistics');
+    Route::get('/weekly-task-service-statistics', 'weeklyTaskServiceStatistics');
 });
