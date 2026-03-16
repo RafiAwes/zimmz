@@ -13,6 +13,11 @@ Route::group(['controller' => GeneralController::class, 'prefix' => 'pages'], fu
 
 Route::group(['controller' => GeneralController::class, 'prefix' => 'faqs'], function () {
     Route::get('/', 'getFaqs');
+    Route::get('/get-all', 'getAllFaqs')->middleware(['auth:api', 'role.admin']);
+    Route::get('/details/{id}', 'faqDetails')->middleware(['auth:api', 'role.admin']);
+    Route::post('/create', 'createFaq')->middleware(['auth:api', 'role.admin']);
+    Route::put('/update/{id}', 'updateFaq')->middleware(['auth:api', 'role.admin']);
+    Route::delete('/delete/{id}', 'deleteFaq')->middleware(['auth:api', 'role.admin']);
     Route::post('/upsert', 'upsertFaq')->middleware(['auth:api', 'role.admin']);
     Route::delete('/{id}', 'deleteFaq')->middleware(['auth:api', 'role.admin']);
 });
@@ -120,7 +125,7 @@ Route::group(['controller' => SupportMessageController::class, 'prefix' => 'supp
     Route::get('/admin/get-all', 'adminGetAll')->middleware('role.admin');
     Route::get('/admin/details/{id}', 'adminDetails')->middleware('role.admin');
     Route::post('/admin/reply/{id}', 'adminReply')->middleware('role.admin');
-    
+
 });
 
 Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {

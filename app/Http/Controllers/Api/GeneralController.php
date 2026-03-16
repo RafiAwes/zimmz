@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Faq\UpsertFaqRequest;
+use App\Http\Requests\Api\Page\StorePageRequest;
+use App\Http\Requests\Api\Page\UpdatePageRequest;
 use App\Models\Faq;
 use App\Models\Page;
 use App\Traits\ApiResponseTraits;
-use App\Http\Requests\Api\Page\StorePageRequest;
-use App\Http\Requests\Api\Page\UpdatePageRequest;
-use App\Http\Requests\Api\Faq\UpsertFaqRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class GeneralController extends Controller
 {
@@ -65,11 +67,69 @@ class GeneralController extends Controller
      */
     public function getFaqs()
     {
-        $faqs = Faq::where('is_active', true)
-            ->orderBy('sort_order', 'asc')
+        $faqs = Faq::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderByDesc('id')
             ->get();
 
         return $this->successResponse($faqs, 'FAQs retrieved successfully.', 200);
+    }
+
+    /**
+     * Get all FAQs for admin.
+     */
+    public function getAllFaqs(Request $request): JsonResponse
+    {
+        $perPage = $request->input('per_page', 10);
+        $search = $request->input('search');
+
+        $faqs = Faq::query()
+            ->when($request->has('is_active'), function ($query) use ($request) {
+                $query->where('is_active', $request->boolean('is_active'));
+            })
+            ->when($search, function ($query, $search) {
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('question', 'like', "%{$search}%")
+                        ->orWhere('answer', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('sort_order')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+
+        return $this->successResponse($faqs, 'FAQs fetched successfully.', 200);
+    }
+
+    /**
+     * Get FAQ details.
+     */
+    public function faqDetails(int|string $id): JsonResponse
+    {
+        $faq = Faq::query()->findOrFail($id);
+
+        return $this->successResponse($faq, 'FAQ details fetched successfully.', 200);
+    }
+
+    /**
+     * Create a new FAQ.
+     */
+    public function createFaq(UpsertFaqRequest $request): JsonResponse
+    {
+        $faq = Faq::query()->create($request->validated());
+
+        return $this->successResponse($faq, 'FAQ created successfully.', 201);
+    }
+
+    /**
+     * Update an existing FAQ.
+     */
+    public function updateFaq(UpsertFaqRequest $request, int|string $id): JsonResponse
+    {
+        $faq = Faq::query()->findOrFail($id);
+        $faq->update($request->validated());
+
+        return $this->successResponse($faq, 'FAQ updated successfully.', 200);
     }
 
     /**
@@ -96,6 +156,6 @@ class GeneralController extends Controller
         $faq = Faq::findOrFail($id);
         $faq->delete();
 
-        return $this->successResponse(null, 'FAQ deleted successfully.');
+        return $this->successResponse(null, 'FAQ deleted successfully.', 200);
     }
 }
