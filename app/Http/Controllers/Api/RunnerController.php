@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreRunnerRequest;
+use App\Http\Requests\Api\UpdateRunnerRequest;
 use App\Models\Order;
 use App\Models\Runner;
 use App\Models\User;
 use App\Traits\ApiResponseTraits;
+use App\Traits\ImageTrait;
 use App\Traits\NotificationTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,8 +19,7 @@ use Illuminate\Support\Facades\Hash;
 
 class RunnerController extends Controller
 {
-    use ApiResponseTraits;
-    use NotificationTrait;
+    use ApiResponseTraits, ImageTrait, NotificationTrait;
 
     public function runnersList(Request $request): JsonResponse
     {
@@ -28,15 +29,17 @@ class RunnerController extends Controller
     public function create(StoreRunnerRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $avatarPath = $this->uploadAvatar($request, 'avatar', 'images/user');
 
         try {
-            return DB::transaction(function () use ($validated) {
+            return DB::transaction(function () use ($validated, $avatarPath) {
                 $user = User::create([
                     'name' => $validated['name'],
                     'email' => $validated['email'],
                     'password' => Hash::make($validated['password']),
-                    'contact_number' => $validated['phone'] ?? null,
-                    'address' => $validated['location'] ?? null,
+                    'contact_number' => $validated['contact_number'] ?? null,
+                    'address' => $validated['address'] ?? null,
+                    'avatar' => $avatarPath,
                     'role' => 'runner',
                     'email_verified_at' => now(),
                     'is_active' => true,
@@ -51,7 +54,47 @@ class RunnerController extends Controller
                 return $this->successResponse($user->load('runner'), 'Runner created successfully.', 201);
             });
         } catch (\Exception $e) {
+            if ($avatarPath) {
+                $this->deleteImage($avatarPath);
+            }
+
             return $this->errorResponse('Failed to create runner.', 500, $e->getMessage());
+        }
+    }
+
+    public function updateRunner(UpdateRunnerRequest $request, int|string $id): JsonResponse
+    {
+        $validated = $request->validated();
+
+        try {
+            return DB::transaction(function () use ($validated, $id) {
+                $runner = User::where('role', 'runner')->with('runner')->findOrFail($id);
+
+                $userFields = array_filter([
+                    'name' => $validated['name'] ?? null,
+                    'email' => $validated['email'] ?? null,
+                    'contact_number' => $validated['contact_number'] ?? null,
+                    'address' => $validated['address'] ?? null,
+                    'password' => isset($validated['password']) ? Hash::make($validated['password']) : null,
+                ], fn ($value) => ! is_null($value));
+
+                if (! empty($userFields)) {
+                    $runner->update($userFields);
+                }
+
+                $runnerFields = array_filter([
+                    'category' => $validated['runner_category'] ?? null,
+                    'type' => $validated['runner_type'] ?? null,
+                ], fn ($value) => ! is_null($value));
+
+                if (! empty($runnerFields)) {
+                    $runner->runner->update($runnerFields);
+                }
+
+                return $this->successResponse($runner->fresh('runner'), 'Runner updated successfully.', 200);
+            });
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to update runner.', 500, $e->getMessage());
         }
     }
 
@@ -85,6 +128,25 @@ class RunnerController extends Controller
             ->paginate($per_page);
 
         return $this->successResponse($runners, 'Runners fetched successfully.', 200);
+    }
+
+    public function delete(int|string $id): JsonResponse
+    {
+        $runner = User::where('role', 'runner')->with('runner')->findOrFail($id);
+
+        try {
+            DB::transaction(function () use ($runner) {
+                if ($runner->avatar) {
+                    $this->deleteImage($runner->avatar);
+                }
+
+                $runner->delete();
+            });
+
+            return $this->successResponse(null, 'Runner deleted successfully.', 200);
+        } catch (\Exception $e) {
+            return $this->errorResponse('Failed to delete runner.', 500, $e->getMessage());
+        }
     }
 
     public function details(int|string $id): JsonResponse

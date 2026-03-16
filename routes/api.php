@@ -1,24 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\AdController;
-use App\Http\Controllers\Api\adminController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\FerryController;
-use App\Http\Controllers\Api\GeneralController;
-use App\Http\Controllers\Api\IslandController;
-use App\Http\Controllers\Api\MessageController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RestaurantController;
-use App\Http\Controllers\Api\RunnerController;
-use App\Http\Controllers\Api\SubscriptionController;
-use App\Http\Controllers\Api\SupportMessageController;
-use App\Http\Controllers\Api\TaskController;
-use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\{AdController, AuthController, DashboardController, FerryController, GeneralController, IslandController, MessageController, NotificationController, OrderController, ProfileController, RestaurantController, RunnerController, SubscriptionController, SupportMessageController, TaskController, UserController, adminController as AdminController};
 
 Route::group(['controller' => GeneralController::class, 'prefix' => 'pages'], function () {
     Route::get('/{title}', 'getPage');
@@ -132,9 +116,11 @@ Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 
 Route::group(['controller' => SupportMessageController::class, 'prefix' => 'support-messages', 'middleware' => 'auth:api'], function () {
     Route::post('/send', 'send');
     Route::get('/my-messages', 'myMessages');
+    Route::delete('/delete/{id}', 'delete');
     Route::get('/admin/get-all', 'adminGetAll')->middleware('role.admin');
     Route::get('/admin/details/{id}', 'adminDetails')->middleware('role.admin');
     Route::post('/admin/reply/{id}', 'adminReply')->middleware('role.admin');
+    
 });
 
 Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'middleware' => 'auth:api'], function () {
@@ -142,6 +128,8 @@ Route::group(['controller' => RunnerController::class, 'prefix' => 'runner', 'mi
     Route::get('/get-all', 'getAll');
     Route::get('/details/{id}', 'details');
     Route::post('/create', 'create')->middleware('role.admin');
+    Route::put('/update/{id}', 'updateRunner')->middleware('role.admin');
+    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
     Route::post('/accept-order/{order_id}', 'acceptOrder')->middleware('role.runner');
     Route::post('/decline-order/{order_id}', 'declineOrder')->middleware('role.runner');
     Route::post('/order-completed/{order_id}', 'orderCompleted')->middleware('role.runner');
@@ -151,9 +139,10 @@ Route::group(['controller' => UserController::class, 'prefix' => 'user', 'middle
     Route::get('/list', 'usersList')->middleware('role.admin');
     Route::get('/lost-users', 'lostUsers')->middleware('role.admin');
     Route::get('/details/{id}', 'details');
+    Route::delete('/delete/{id}', 'delete')->middleware('role.admin');
 });
 
-Route::group(['controller' => adminController::class, 'prefix' => 'admin', 'middleware' => ['auth:api', 'role.admin']], function () {
+Route::group(['controller' => AdminController::class, 'prefix' => 'admin', 'middleware' => ['auth:api', 'role.admin']], function () {
     Route::post('/accept-and-assign/{order_id}/{runner_user_id}', 'acceptAndAssign');
     Route::post('/request-delivery/{order_id}', 'requestDelivery');
 });

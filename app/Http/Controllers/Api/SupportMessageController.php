@@ -2,18 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Api\SupportMessage\ReplySupportMessageRequest;
-use App\Http\Requests\Api\SupportMessage\StoreSupportMessageRequest;
-use App\Mail\AdminReplyToSupportMessageMail;
-use App\Mail\UserSupportMessageToAdminMail;
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\{Auth, Mail};
 use App\Http\Controllers\Controller;
-use App\Models\SupportMessage;
-use App\Models\User;
+use App\Http\Requests\Api\SupportMessage\{ReplySupportMessageRequest, StoreSupportMessageRequest};
+use App\Mail\{AdminReplyToSupportMessageMail, UserSupportMessageToAdminMail};
+use App\Models\{SupportMessage, User};
 use App\Traits\ApiResponseTraits;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 
 class SupportMessageController extends Controller
 {
@@ -33,11 +28,13 @@ class SupportMessageController extends Controller
 
             $supportMessage->load('user');
 
+            /** @var \Illuminate\Database\Eloquent\Collection<int, User> $admins */
             $admins = User::query()
                 ->where('role', 'admin')
                 ->whereNotNull('email')
                 ->get();
 
+            /** @var User $admin */
             foreach ($admins as $admin) {
                 Mail::to($admin->email)->send(
                     (new UserSupportMessageToAdminMail($supportMessage, $admin))
@@ -142,5 +139,25 @@ class SupportMessageController extends Controller
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to send reply.', 500, $e->getMessage());
         }
+    }
+
+    public function delete(int $id): JsonResponse
+    {
+        $user = Auth::guard('api')->user();
+
+        if (! $user) {
+            return $this->errorResponse('User not authenticated.', 401);
+        }
+
+        $supportMessageQuery = SupportMessage::query()->whereKey($id);
+
+        if ($user->role !== 'admin') {
+            $supportMessageQuery->where('user_id', $user->id);
+        }
+
+        $supportMessage = $supportMessageQuery->firstOrFail();
+        $supportMessage->delete();
+
+        return $this->successResponse(null, 'Support message deleted successfully.', 200);
     }
 }

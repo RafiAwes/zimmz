@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Traits\ApiResponseTraits;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -74,5 +75,16 @@ class UserController extends Controller
         }
 
         return $this->successResponse($user, 'User details fetched successfully.', 200);
+    }
+
+    public function delete(int|string $id): JsonResponse
+    {
+        $user = User::query()
+            ->where('role', 'user')
+            ->findOrFail($id);
+
+        $user->delete();
+
+        return $this->successResponse(null, 'User deleted successfully.', 200);
     }
 }

@@ -2,25 +2,50 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\{JsonResponse, Request};
-use Illuminate\Support\Facades\{Auth, DB, Hash};
-use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
-use App\Traits\{ApiResponseTraits, ImageTrait};
+use App\Models\Order;
+use App\Models\TaskService;
+use App\Traits\ApiResponseTraits;
+use App\Traits\ImageTrait;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class ProfileController extends Controller
 {
     use ApiResponseTraits, ImageTrait;
 
-    public function viewProfile(Request $request)
+    public function viewProfile(Request $request): JsonResponse
     {
+        /** @var \App\Models\User|null $user */
         $user = Auth::guard('api')->user();
         if ($user) {
             $user->load('runner');
         }
 
-        return $this->successResponse($user, 'Profile details fetched successfully.', 200);
+        $data = $user;
+
+        if ($user && $user->role === 'runner') {
+            $ordersQuery = Order::where('runner_id', $user->id);
+            $tasksQuery = TaskService::where('runner_id', $user->id);
+
+            $data = array_merge($user->toArray(), [
+                'runner_stats' => [
+                    'total_orders' => (clone $ordersQuery)->count(),
+                    'completed_orders' => (clone $ordersQuery)->where('runner_status', 'completed')->count(),
+                    'pending_orders' => (clone $ordersQuery)->whereIn('runner_status', ['new', 'ongoing'])->count(),
+                    'total_tasks' => (clone $tasksQuery)->count(),
+                    'completed_tasks' => (clone $tasksQuery)->where('status', 'completed')->count(),
+                    'pending_tasks' => (clone $tasksQuery)->whereNotIn('status', ['completed', 'cancelled'])->count(),
+                ],
+            ]);
+        }
+
+        return $this->successResponse($data, 'Profile details fetched successfully.', 200);
     }
 
     public function updateProfile(Request $request)
@@ -54,6 +79,8 @@ class ProfileController extends Controller
             }
         } elseif ($user->role === 'user') {
             $allowedUserFields = ['name', 'email', 'address'];
+        } elseif ($user->role === 'admin') {
+            $allowedUserFields = ['name', 'email', 'contact_number', 'address'];
         }
 
         try {

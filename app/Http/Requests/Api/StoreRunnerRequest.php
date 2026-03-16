@@ -24,11 +24,12 @@ class StoreRunnerRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'nullable|string|max:20',
-            'location' => 'nullable|string|max:500',
+            'contact_number' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
             'password' => 'required|string|min:8',
             'runner_category' => 'required|in:food_delivery,ferry_drops',
             'runner_type' => 'nullable|in:registered,assigned',
+            'avatar' => 'nullable|image|mimes:jpeg,jpg,png,gif|max:10240',
         ];
     }
 }
