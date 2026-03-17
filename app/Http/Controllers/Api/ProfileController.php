@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Models\TaskService;
 use App\Traits\ApiResponseTraits;
 use App\Traits\ImageTrait;
 use Illuminate\Http\JsonResponse;
@@ -28,22 +26,6 @@ class ProfileController extends Controller
         }
 
         $data = $user;
-
-        if ($user && $user->role === 'runner') {
-            $ordersQuery = Order::where('runner_id', $user->id);
-            $tasksQuery = TaskService::where('runner_id', $user->id);
-
-            $data = array_merge($user->toArray(), [
-                'runner_stats' => [
-                    'total_orders' => (clone $ordersQuery)->count(),
-                    'completed_orders' => (clone $ordersQuery)->where('runner_status', 'completed')->count(),
-                    'pending_orders' => (clone $ordersQuery)->whereIn('runner_status', ['new', 'ongoing'])->count(),
-                    'total_tasks' => (clone $tasksQuery)->count(),
-                    'completed_tasks' => (clone $tasksQuery)->where('status', 'completed')->count(),
-                    'pending_tasks' => (clone $tasksQuery)->whereNotIn('status', ['completed', 'cancelled'])->count(),
-                ],
-            ]);
-        }
 
         return $this->successResponse($data, 'Profile details fetched successfully.', 200);
     }

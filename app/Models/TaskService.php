@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class TaskService extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'user_id',
         'runner_id',
@@ -24,5 +25,10 @@ class TaskService extends Model
     public function runner()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function transactions()
+    {
+        return $this->morphMany(Transaction::class, 'payable');
     }
 }

@@ -1,8 +1,30 @@
 <?php
 
+use App\Http\Controllers\Api\AdController;
+use App\Http\Controllers\Api\adminController as AdminController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\FerryController;
+use App\Http\Controllers\Api\GeneralController;
+use App\Http\Controllers\Api\IslandController;
+use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RestaurantController;
+use App\Http\Controllers\Api\RunnerController;
+use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\SupportMessageController;
+use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\{AdController, AuthController, DashboardController, FerryController, GeneralController, IslandController, MessageController, NotificationController, OrderController, ProfileController, RestaurantController, RunnerController, SubscriptionController, SupportMessageController, TaskController, UserController, adminController as AdminController};
+
+Route::group(['controller' => CheckoutController::class, 'prefix' => 'checkout', 'middleware' => 'auth:api'], function () {
+    Route::post('/create-payment-intent', 'createPaymentIntent');
+    Route::post('/confirm-payment', 'confirmPayment');
+});
 
 Route::group(['controller' => GeneralController::class, 'prefix' => 'pages'], function () {
     Route::get('/{title}', 'getPage');
@@ -110,6 +132,7 @@ Route::group(['controller' => TaskController::class, 'prefix' => 'task-service',
     Route::post('/accept/{id}', 'runnerAcceptTask');
     Route::post('/reject/{id}', 'runnerRejectTask');
     Route::post('/complete/{id}', 'runnerCompleteTask');
+    Route::post('/approve/{id}', 'approveTask');
 });
 
 Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 'middleware' => 'auth:api'], function () {

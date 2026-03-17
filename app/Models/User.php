@@ -63,6 +63,7 @@ class User extends Authenticatable implements JWTSubject
         'total_tasks_created',
         'runner_orders_completed',
         'runner_orders_pending',
+        'runner_stats',
     ];
 
     /**
@@ -164,5 +165,24 @@ class User extends Authenticatable implements JWTSubject
     public function getRunnerOrdersPendingAttribute()
     {
         return TaskService::where('runner_id', $this->id)->whereIn('status', ['new', 'pending'])->count();
+    }
+
+    public function getRunnerStatsAttribute(): ?array
+    {
+        if ($this->role !== 'runner') {
+            return null;
+        }
+
+        $ordersQuery = Order::where('runner_id', $this->id);
+        $tasksQuery = TaskService::where('runner_id', $this->id);
+
+        return [
+            'total_orders' => (clone $ordersQuery)->count(),
+            'completed_orders' => (clone $ordersQuery)->where('runner_status', 'completed')->count(),
+            'pending_orders' => (clone $ordersQuery)->whereIn('runner_status', ['new', 'ongoing'])->count(),
+            'total_tasks' => (clone $tasksQuery)->count(),
+            'completed_tasks' => (clone $tasksQuery)->where('status', 'completed')->count(),
+            'pending_tasks' => (clone $tasksQuery)->whereNotIn('status', ['completed', 'cancelled'])->count(),
+        ];
     }
 }

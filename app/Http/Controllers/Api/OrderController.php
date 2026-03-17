@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\{JsonResponse, Request};
-use Illuminate\Support\Facades\{Auth, DB};
+use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Order\{StoreOrderRequest, UpdateOrderRequest};
-use App\Models\{FerryDrop, FoodDelivery, Order};
-use App\Traits\{ApiResponseTraits, LocationTrait, NotificationTrait};
+use App\Http\Requests\Api\Order\StoreOrderRequest;
+use App\Http\Requests\Api\Order\UpdateOrderRequest;
+use App\Models\FerryDrop;
+use App\Models\FoodDelivery;
+use App\Models\Order;
+use App\Traits\ApiResponseTraits;
+use App\Traits\LocationTrait;
+use App\Traits\NotificationTrait;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -279,6 +287,12 @@ class OrderController extends Controller
                 'runner_status' => 'completed',
                 'delivery_requested' => false,
             ]);
+
+            // Capture payment if authorized
+            $transaction = $order->transactions()->where('status', 'authorized')->first();
+            if ($transaction) {
+                app(CheckoutController::class)->capturePayment($transaction->payment_intent_id);
+            }
         });
 
         $order->refresh();

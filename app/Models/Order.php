@@ -71,4 +71,9 @@ class Order extends Model
     {
         return $this->hasOne(FerryDrop::class);
     }
+
+    public function transactions()
+    {
+        return $this->morphMany(Transaction::class, 'payable');
+    }
 }

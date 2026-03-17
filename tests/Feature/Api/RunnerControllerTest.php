@@ -24,7 +24,19 @@ test('authenticated user can view runner details', function () {
 
     $response->assertStatus(200)
         ->assertJsonPath('data.id', $runnerUser->id)
-        ->assertJsonPath('data.runner.category', 'food_delivery');
+        ->assertJsonPath('data.runner.category', 'food_delivery')
+        ->assertJsonStructure([
+            'data' => [
+                'runner_stats' => [
+                    'total_orders',
+                    'completed_orders',
+                    'pending_orders',
+                    'total_tasks',
+                    'completed_tasks',
+                    'pending_tasks',
+                ],
+            ],
+        ]);
 });
 
 test('unauthenticated user cannot view runner details', function () {
@@ -67,7 +79,23 @@ test('authenticated user can view runners list with search pagination and type f
         ->assertJsonPath('data.total', 1)
         ->assertJsonPath('data.per_page', 1)
         ->assertJsonPath('data.data.0.id', $assignedRunner->id)
-        ->assertJsonPath('data.data.0.runner.type', 'assigned');
+        ->assertJsonPath('data.data.0.runner.type', 'assigned')
+        ->assertJsonStructure([
+            'data' => [
+                'data' => [
+                    '*' => [
+                        'runner_stats' => [
+                            'total_orders',
+                            'completed_orders',
+                            'pending_orders',
+                            'total_tasks',
+                            'completed_tasks',
+                            'pending_tasks',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
 });
 
 test('unauthenticated user cannot view runners list', function () {
