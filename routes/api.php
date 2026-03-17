@@ -133,7 +133,8 @@ Route::group(['controller' => TaskController::class, 'prefix' => 'task-service',
     Route::post('/reject/{id}', 'runnerRejectTask');
     Route::post('/complete/{id}', 'runnerCompleteTask');
     Route::post('/approve/{id}', 'approveTask');
-});
+    Route::post('/user/reject/{id}', 'rejectTask');
+}); 
 
 Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 'middleware' => 'auth:api'], function () {
     Route::post('send', 'sendMessage');

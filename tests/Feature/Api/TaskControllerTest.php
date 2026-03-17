@@ -84,7 +84,7 @@ test('it notifies only registered runners when a task is created', function () {
 
     $this->assertTrue(Notification::query()
         ->where('user_id', $registeredRunnerUser->id)
-        ->where('type', 'order_created')
+        ->where('type', 'task_created')
         ->exists());
 
     $this->assertFalse(Notification::query()
@@ -161,15 +161,20 @@ test('runner can accept a task', function () {
     $response->assertStatus(200);
     $this->assertDatabaseHas('task_services', [
         'id' => $taskService->id,
-        'status' => 'pending',
+        'status' => 'ongoing',
         'runner_id' => $runner->id,
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $taskService->user_id,
+        'type' => 'task_accepted',
     ]);
 });
 
 test('runner can reject a task', function () {
     $runner = User::factory()->create(['role' => 'runner']);
     $token = JWTAuth::fromUser($runner);
-    $taskService = TaskService::factory()->create(['status' => 'pending']);
+    $taskService = TaskService::factory()->create(['status' => 'ongoing']);
 
     $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->postJson("/api/task-service/reject/{$taskService->id}");
@@ -177,14 +182,19 @@ test('runner can reject a task', function () {
     $response->assertStatus(200);
     $this->assertDatabaseHas('task_services', [
         'id' => $taskService->id,
-        'status' => 'rejected',
+        'status' => 'new',
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $taskService->user_id,
+        'type' => 'task_runner_withdrawn',
     ]);
 });
 
 test('runner can complete a task', function () {
     $runner = User::factory()->create(['role' => 'runner']);
     $token = JWTAuth::fromUser($runner);
-    $taskService = TaskService::factory()->create(['status' => 'pending']);
+    $taskService = TaskService::factory()->create(['status' => 'ongoing']);
 
     $response = $this->withHeader('Authorization', 'Bearer '.$token)
         ->postJson("/api/task-service/complete/{$taskService->id}");
@@ -192,6 +202,61 @@ test('runner can complete a task', function () {
     $response->assertStatus(200);
     $this->assertDatabaseHas('task_services', [
         'id' => $taskService->id,
+        'status' => 'pending_approval',
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $taskService->user_id,
+        'type' => 'task_completed',
+    ]);
+});
+
+test('user can approve a task', function () {
+    $user = User::factory()->create(['role' => 'user']);
+    $runner = User::factory()->create(['role' => 'runner']);
+    $token = JWTAuth::fromUser($user);
+    $taskService = TaskService::factory()->create([
+        'user_id' => $user->id,
+        'runner_id' => $runner->id,
+        'status' => 'pending_approval'
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/task-service/approve/{$taskService->id}");
+
+    $response->assertStatus(200);
+    $this->assertDatabaseHas('task_services', [
+        'id' => $taskService->id,
         'status' => 'completed',
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $runner->id,
+        'type' => 'task_approved',
+    ]);
+});
+
+test('user can reject a task completion', function () {
+    $user = User::factory()->create(['role' => 'user']);
+    $runner = User::factory()->create(['role' => 'runner']);
+    $token = JWTAuth::fromUser($user);
+    $taskService = TaskService::factory()->create([
+        'user_id' => $user->id,
+        'runner_id' => $runner->id,
+        'status' => 'pending_approval'
+    ]);
+
+    $response = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->postJson("/api/task-service/user/reject/{$taskService->id}");
+
+    $response->assertStatus(200);
+    $this->assertDatabaseHas('task_services', [
+        'id' => $taskService->id,
+        'status' => 'ongoing',
+    ]);
+
+    $this->assertDatabaseHas('notifications', [
+        'user_id' => $runner->id,
+        'type' => 'task_completion_rejected',
     ]);
 });
