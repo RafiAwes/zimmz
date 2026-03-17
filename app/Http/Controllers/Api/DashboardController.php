@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\{JsonResponse, Request};
 use App\Http\Controllers\Controller;
-use App\Models\{Order, TaskService, User};
+use App\Models\Order;
+use App\Models\TaskService;
+use App\Models\User;
 use App\Traits\ApiResponseTraits;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -66,24 +69,30 @@ class DashboardController extends Controller
         };
     }
 
-    public function weeklyTaskServiceStatistics(): JsonResponse
+    public function taskServiceStatistics(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'period' => 'nullable|in:weekly,monthly,yearly',
+        ]);
+
+        $period = $validated['period'] ?? 'weekly';
         $now = CarbonImmutable::now();
+
+        $data = match ($period) {
+            'monthly' => $this->monthlyTaskServiceStatisticsData($now),
+            'yearly' => $this->yearlyTaskServiceStatisticsData($now),
+            default => $this->weeklyTaskServiceStatisticsData($now),
+        };
+
+        return $this->successResponse($data, ucfirst($period).' task service statistics fetched successfully.', 200);
+    }
+
+    private function weeklyTaskServiceStatisticsData(CarbonImmutable $now): array
+    {
         $weekStart = $now->startOfWeek()->startOfDay();
         $weekEnd = $weekStart->addDays(6)->endOfDay();
 
-        $rows = TaskService::query()
-            ->selectRaw('DATE(created_at) as bucket_date')
-            ->selectRaw('COUNT(*) as total_count')
-            ->selectRaw('SUM(CASE WHEN status = "new" THEN 1 ELSE 0 END) as new_count')
-            ->selectRaw('SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending_count')
-            ->selectRaw('SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_count')
-            ->selectRaw('SUM(CASE WHEN status = "rejected" THEN 1 ELSE 0 END) as rejected_count')
-            ->selectRaw('COALESCE(SUM(CASE WHEN status = "completed" THEN CAST(price AS DECIMAL(10, 2)) ELSE 0 END), 0) as completed_earnings')
-            ->whereBetween('created_at', [$weekStart, $weekEnd])
-            ->groupBy('bucket_date')
-            ->get()
-            ->keyBy('bucket_date');
+        $rows = $this->getTaskServiceDataGroupedByDay($weekStart, $weekEnd);
 
         $labels = [];
         $totalTasks = [];
@@ -107,7 +116,7 @@ class DashboardController extends Controller
             $completedEarnings[] = round((float) ($row->completed_earnings ?? 0), 2);
         }
 
-        return $this->successResponse([
+        return [
             'period' => 'weekly',
             'week_start' => $weekStart->toDateString(),
             'week_end' => $weekEnd->toDateString(),
@@ -118,16 +127,130 @@ class DashboardController extends Controller
             'completed_tasks' => $completedTasks,
             'rejected_tasks' => $rejectedTasks,
             'completed_earnings' => $completedEarnings,
-            'totals' => [
-                'total_tasks' => array_sum($totalTasks),
-                'new_tasks' => array_sum($newTasks),
-                'pending_tasks' => array_sum($pendingTasks),
-                'completed_tasks' => array_sum($completedTasks),
-                'rejected_tasks' => array_sum($rejectedTasks),
-                'completed_earnings' => round(array_sum($completedEarnings), 2),
-            ],
+            'totals' => $this->calculateTotals($totalTasks, $newTasks, $pendingTasks, $completedTasks, $rejectedTasks, $completedEarnings),
             'currency' => 'USD',
-        ], 'Weekly task service statistics fetched successfully.', 200);
+        ];
+    }
+
+    private function monthlyTaskServiceStatisticsData(CarbonImmutable $now): array
+    {
+        $monthStart = $now->startOfMonth()->startOfDay();
+        $monthEnd = $now->endOfMonth()->endOfDay();
+
+        $rows = $this->getTaskServiceDataGroupedByDay($monthStart, $monthEnd);
+
+        $labels = [];
+        $totalTasks = [];
+        $newTasks = [];
+        $pendingTasks = [];
+        $completedTasks = [];
+        $rejectedTasks = [];
+        $completedEarnings = [];
+        $daysInMonth = $monthStart->daysInMonth;
+
+        for ($dayNumber = 1; $dayNumber <= $daysInMonth; $dayNumber++) {
+            $day = $monthStart->setDay($dayNumber);
+            $key = $day->toDateString();
+            $row = $rows->get($key);
+
+            $labels[] = (string) $dayNumber;
+            $totalTasks[] = (int) ($row->total_count ?? 0);
+            $newTasks[] = (int) ($row->new_count ?? 0);
+            $pendingTasks[] = (int) ($row->pending_count ?? 0);
+            $completedTasks[] = (int) ($row->completed_count ?? 0);
+            $rejectedTasks[] = (int) ($row->rejected_count ?? 0);
+            $completedEarnings[] = round((float) ($row->completed_earnings ?? 0), 2);
+        }
+
+        return [
+            'period' => 'monthly',
+            'month' => $monthStart->format('Y-m'),
+            'labels' => $labels,
+            'total_tasks' => $totalTasks,
+            'new_tasks' => $newTasks,
+            'pending_tasks' => $pendingTasks,
+            'completed_tasks' => $completedTasks,
+            'rejected_tasks' => $rejectedTasks,
+            'completed_earnings' => $completedEarnings,
+            'totals' => $this->calculateTotals($totalTasks, $newTasks, $pendingTasks, $completedTasks, $rejectedTasks, $completedEarnings),
+            'currency' => 'USD',
+        ];
+    }
+
+    private function yearlyTaskServiceStatisticsData(CarbonImmutable $now): array
+    {
+        $yearStart = $now->startOfYear()->startOfDay();
+        $yearEnd = $now->endOfYear()->endOfDay();
+
+        $rows = $this->getTaskServiceDataGroupedByDay($yearStart, $yearEnd);
+
+        $labels = [];
+        $totalTasks = array_fill(0, 12, 0);
+        $newTasks = array_fill(0, 12, 0);
+        $pendingTasks = array_fill(0, 12, 0);
+        $completedTasks = array_fill(0, 12, 0);
+        $rejectedTasks = array_fill(0, 12, 0);
+        $completedEarnings = array_fill(0, 12, 0);
+
+        foreach ($rows as $row) {
+            $bucketDate = CarbonImmutable::parse((string) $row->bucket_date);
+            $monthIndex = $bucketDate->month - 1;
+
+            $totalTasks[$monthIndex] += (int) ($row->total_count ?? 0);
+            $newTasks[$monthIndex] += (int) ($row->new_count ?? 0);
+            $pendingTasks[$monthIndex] += (int) ($row->pending_count ?? 0);
+            $completedTasks[$monthIndex] += (int) ($row->completed_count ?? 0);
+            $rejectedTasks[$monthIndex] += (int) ($row->rejected_count ?? 0);
+            $completedEarnings[$monthIndex] += (float) ($row->completed_earnings ?? 0);
+        }
+
+        for ($monthNumber = 1; $monthNumber <= 12; $monthNumber++) {
+            $labels[] = $yearStart->setMonth($monthNumber)->format('M');
+        }
+
+        $completedEarnings = array_map(fn ($val) => round($val, 2), $completedEarnings);
+
+        return [
+            'period' => 'yearly',
+            'year' => $yearStart->year,
+            'labels' => $labels,
+            'total_tasks' => $totalTasks,
+            'new_tasks' => $newTasks,
+            'pending_tasks' => $pendingTasks,
+            'completed_tasks' => $completedTasks,
+            'rejected_tasks' => $rejectedTasks,
+            'completed_earnings' => $completedEarnings,
+            'totals' => $this->calculateTotals($totalTasks, $newTasks, $pendingTasks, $completedTasks, $rejectedTasks, $completedEarnings),
+            'currency' => 'USD',
+        ];
+    }
+
+    private function getTaskServiceDataGroupedByDay($start, $end)
+    {
+        return TaskService::query()
+            ->selectRaw('DATE(created_at) as bucket_date')
+            ->selectRaw('COUNT(*) as total_count')
+            ->selectRaw('SUM(CASE WHEN status = "new" THEN 1 ELSE 0 END) as new_count')
+            ->selectRaw('SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending_count')
+            ->selectRaw('SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_count')
+            ->selectRaw('SUM(CASE WHEN status = "rejected" THEN 1 ELSE 0 END) as rejected_count')
+            ->selectRaw('COALESCE(SUM(CASE WHEN status = "completed" THEN CAST(price AS DECIMAL(10, 2)) ELSE 0 END), 0) as completed_earnings')
+            ->whereBetween('created_at', [$start, $end])
+            ->groupBy('bucket_date')
+            ->get()
+            ->keyBy('bucket_date');
+    }
+
+    private function calculateTotals($totalTasks, $newTasks, $pendingTasks, $completedTasks, $rejectedTasks, $completedEarnings): array
+    {
+        return [
+            'total_tasks' => array_sum($totalTasks),
+            'new_tasks' => array_sum($newTasks),
+            'pending_tasks' => array_sum($pendingTasks),
+            'completed_tasks' => array_sum($completedTasks),
+            'rejected_tasks' => array_sum($rejectedTasks),
+            'completed_earnings' => round(array_sum($completedEarnings), 2),
+        ];
     }
 
     private function weeklyRegistrationStatistics(CarbonImmutable $now): array

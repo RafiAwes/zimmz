@@ -115,48 +115,58 @@ test('admin can get weekly monthly and yearly registration statistics', function
     expect($yearlyResponse->json('data.labels'))->toHaveCount(12);
 });
 
-test('admin can get weekly task service statistics for column chart', function () {
+test('admin can get weekly, monthly and yearly task service statistics', function () {
     /** @var \Tests\TestCase $this */
     $admin = User::factory()->create(['role' => 'admin']);
     $creator = User::factory()->create(['role' => 'user']);
     $token = JWTAuth::fromUser($admin);
+    
     $weekStart = CarbonImmutable::now()->startOfWeek();
+    $monthStart = CarbonImmutable::now()->startOfMonth();
 
+    // Weekly/Monthly Task
     TaskService::factory()->create([
         'user_id' => $creator->id,
         'status' => 'completed',
         'price' => '40.00',
         'created_at' => $weekStart->addDay(),
-        'updated_at' => $weekStart->addDay(),
     ]);
 
+    // Monthly Task
     TaskService::factory()->create([
         'user_id' => $creator->id,
         'status' => 'pending',
         'price' => '30.00',
-        'created_at' => $weekStart->addDays(2),
-        'updated_at' => $weekStart->addDays(2),
+        'created_at' => $monthStart->addDays(10),
     ]);
 
-    TaskService::factory()->create([
-        'user_id' => $creator->id,
-        'status' => 'rejected',
-        'price' => '20.00',
-        'created_at' => $weekStart->addDays(3),
-        'updated_at' => $weekStart->addDays(3),
-    ]);
+    // Weekly Response
+    $weeklyResponse = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->getJson('/api/dashboard/task-service-statistics?period=weekly');
 
-    $response = $this->withHeader('Authorization', 'Bearer '.$token)
-        ->getJson('/api/dashboard/weekly-task-service-statistics');
-
-    $response->assertStatus(200)
+    $weeklyResponse->assertStatus(200)
         ->assertJsonPath('data.period', 'weekly')
-        ->assertJsonPath('data.totals.total_tasks', 3)
+        ->assertJsonPath('data.totals.total_tasks', 1)
         ->assertJsonPath('data.totals.completed_tasks', 1)
-        ->assertJsonPath('data.totals.pending_tasks', 1)
-        ->assertJsonPath('data.totals.rejected_tasks', 1)
-        ->assertJsonPath('data.totals.completed_earnings', 40)
-        ->assertJsonPath('data.currency', 'USD');
+        ->assertJsonPath('data.totals.completed_earnings', 40);
 
-    expect($response->json('data.labels'))->toHaveCount(7);
+    // Monthly Response
+    $monthlyResponse = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->getJson('/api/dashboard/task-service-statistics?period=monthly');
+
+    $monthlyResponse->assertStatus(200)
+        ->assertJsonPath('data.period', 'monthly')
+        ->assertJsonPath('data.totals.total_tasks', 2)
+        ->assertJsonPath('data.totals.completed_tasks', 1)
+        ->assertJsonPath('data.totals.pending_tasks', 1);
+
+    // Yearly Response
+    $yearlyResponse = $this->withHeader('Authorization', 'Bearer '.$token)
+        ->getJson('/api/dashboard/task-service-statistics?period=yearly');
+
+    $yearlyResponse->assertStatus(200)
+        ->assertJsonPath('data.period', 'yearly')
+        ->assertJsonPath('data.totals.total_tasks', 2);
+
+    expect($yearlyResponse->json('data.labels'))->toHaveCount(12);
 });

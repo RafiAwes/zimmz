@@ -190,5 +190,5 @@ Route::group(['controller' => SubscriptionController::class, 'prefix' => 'subscr
 Route::group(['controller' => DashboardController::class, 'prefix' => 'dashboard', 'middleware' => ['auth:api', 'role.admin']], function () {
     Route::get('/overview', 'overview');
     Route::get('/registration-statistics', 'registrationStatistics');
-    Route::get('/weekly-task-service-statistics', 'weeklyTaskServiceStatistics');
+    Route::get('/task-service-statistics', 'taskServiceStatistics');
 });
