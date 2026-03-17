@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\{Auth, Hash};
+use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Controller;
-use App\Models\Runner;
-use App\Models\User;
+use App\Models\{Runner, User};
 use App\Services\VerificationService;
 use App\Traits\ApiResponseTraits;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -73,9 +70,13 @@ class AuthController extends Controller
         ];
 
         // verify email by sending otp (service)
-        $this->verificationService->sendOtp($user);
+        $otpResult = $this->verificationService->sendOtp($user);
+        $otpResultData = $this->normalizeServiceResult($otpResult);
 
-        return $this->successResponse(['user' => $responseData], 'User registered successfully. Please verify your email with the OTP sent.', 201);
+        return $this->successResponse([
+            'user' => $responseData,
+            'otp' => $otpResultData['data']['otp'] ?? null,
+        ], 'User registered successfully. Please verify your email with the OTP sent.', 201);
     }
 
     public function verifyEmail(Request $request)
@@ -131,7 +132,9 @@ class AuthController extends Controller
         $resultData = $this->normalizeServiceResult($result);
 
         if (isset($resultData['success']) && $resultData['success']) {
-            return $this->successResponse(null, $resultData['message'] ?? 'OTP resent.', 200);
+            return $this->successResponse([
+                'otp' => $resultData['data']['otp'] ?? null,
+            ], $resultData['message'] ?? 'OTP resent.', 200);
         } else {
             return $this->errorResponse($resultData['message'] ?? 'Failed to resend OTP.', 400);
         }
@@ -152,7 +155,9 @@ class AuthController extends Controller
         $result = $this->verificationService->forgotPassword($user);
         $resultData = $this->normalizeServiceResult($result);
 
-        return $this->successResponse(null, $resultData['message'] ?? 'Password reset OTP sent to your email.', 200);
+        return $this->successResponse([
+            'otp' => $resultData['data']['otp'] ?? null,
+        ], $resultData['message'] ?? 'Password reset OTP sent to your email.', 200);
     }
 
     public function resetPassword(Request $request)

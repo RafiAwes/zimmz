@@ -17,16 +17,18 @@ test('user can register and verify email with unified verify-otp api', function 
     ]);
 
     $response->assertStatus(201);
+    $response->assertJsonStructure([
+        'data' => [
+            'user',
+            'otp',
+        ],
+    ]);
+
+    $otp = $response->json('data.otp');
+    expect($otp)->toBeString()->and(strlen($otp))->toBe(6);
 
     $user = User::where('email', 'test@example.com')->first();
     expect($user->email_verified_at)->toBeNull();
-
-    // Manual OTP injection for testing
-    $otp = '123456';
-    $user->update([
-        'otp' => Hash::make($otp),
-        'otp_expires_at' => now()->addMinutes(10),
-    ]);
 
     $verifyResponse = $this->postJson('/api/auth/verify-otp', [
         'email' => 'test@example.com',
@@ -48,16 +50,14 @@ test('user can reset password using otp and then authenticated reset-password ap
     ]);
 
     // Step 1: Forgot password
-    $this->postJson('/api/auth/forgot-password', ['email' => 'reset@example.com'])
-        ->assertStatus(200);
+    $forgotResponse = $this->postJson('/api/auth/forgot-password', ['email' => 'reset@example.com'])
+        ->assertStatus(200)
+        ->assertJsonStructure([
+            'data' => ['otp'],
+        ]);
 
-    $user->refresh();
-    // Simulate setting a known OTP on the user model (consistent with new logic)
-    $otp = '654321';
-    $user->update([
-        'otp' => Hash::make($otp),
-        'otp_expires_at' => now()->addMinutes(10),
-    ]);
+    $otp = $forgotResponse->json('data.otp');
+    expect($otp)->toBeString()->and(strlen($otp))->toBe(6);
 
     // Step 2: Verify OTP to get reset token (JWT)
     $verifyResponse = $this->postJson('/api/auth/verify-otp', [
@@ -86,4 +86,23 @@ test('user can reset password using otp and then authenticated reset-password ap
     // Verify token record is deleted
     $tokenExists = DB::table('password_reset_tokens')->where('email', 'reset@example.com')->exists();
     expect($tokenExists)->toBeFalse();
+});
+
+test('user can resend otp and receive plain text otp in response', function () {
+    User::factory()->create([
+        'email' => 'resend@example.com',
+        'email_verified_at' => null,
+    ]);
+
+    $response = $this->postJson('/api/auth/resend-otp', [
+        'email' => 'resend@example.com',
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJsonStructure([
+            'data' => ['otp'],
+        ]);
+
+    $otp = $response->json('data.otp');
+    expect($otp)->toBeString()->and(strlen($otp))->toBe(6);
 });

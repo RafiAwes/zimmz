@@ -34,7 +34,9 @@ class VerificationService
 
         $user->notify(new SendOtpMail($generate));
 
-        return $this->successResponse(null, 'OTP sent successfully.', 200);
+        return $this->successResponse([
+            'otp' => $generate,
+        ], 'OTP sent successfully.', 200);
     }
 
     public function verifyOtp(User $user, string $otp): JsonResponse
@@ -128,7 +130,9 @@ class VerificationService
 
         $user->notify(new SendOtpMail($generate));
 
-        return $this->successResponse(null, 'Password reset OTP sent to your email.', 200);
+        return $this->successResponse([
+            'otp' => $generate,
+        ], 'Password reset OTP sent to your email.', 200);
     }
 
     public function resetPassword(User $user, string $password): JsonResponse
