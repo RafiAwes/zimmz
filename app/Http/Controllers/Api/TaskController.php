@@ -84,15 +84,9 @@ class TaskController extends Controller
 
     public function details($id): JsonResponse
     {
-        $taskService = TaskService::findOrFail($id);
-        $user = User::findOrFail($taskService->user_id);
-        // $runner = User::findOrFail($taskService->runner_id);
+        $taskService = TaskService::with(['user', 'runner'])->findOrFail($id);
 
-        return $this->successResponse([
-            'taskService' => $taskService,
-            'user' => $user,
-            // 'runner' => $runner,
-        ], 'Task service details fetched successfully.', 200);
+        return $this->successResponse($taskService, 'Task service details fetched successfully.', 200);
     }
 
     public function getMyTasks(): JsonResponse

@@ -31,10 +31,8 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string|min:8',
             'role' => 'required|in:admin,user,runner',
-            'runner_category' => 'required_if:role,runner|in:food_delivery,ferry_drops',
             'phone' => 'nullable|string|max:15',
             'location' => 'nullable|string|max:255',
-            'runner_type' => 'required_if:role,runner|in:registered,assigned',
         ]);
 
         $matchPassword = $data['password'] === $data['password_confirmation'];
@@ -56,8 +54,8 @@ class AuthController extends Controller
         if ($data['role'] == 'runner') {
             $runner = new Runner;
             $runner->user_id = $user->id;
-            $runner->type = $data['runner_type'] ?? null;
-            $runner->category = $data['runner_category'] ?? null;
+            $runner->type = "registered";
+            // $runner->category = $data['runner_category'] ?? null;
             $runner->save();
         }
 
