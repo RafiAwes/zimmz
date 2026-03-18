@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\{JsonResponse, Request};
-use Illuminate\Support\Facades\{Auth, Hash};
-use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Controller;
-use App\Models\{Runner, User};
+use App\Models\Runner;
+use App\Models\User;
 use App\Services\VerificationService;
 use App\Traits\ApiResponseTraits;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Socialite\Facades\Socialite;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -55,7 +59,7 @@ class AuthController extends Controller
         if ($data['role'] == 'runner') {
             $runner = new Runner;
             $runner->user_id = $user->id;
-            $runner->type = "registered";
+            $runner->type = 'registered';
             // $runner->category = $data['runner_category'] ?? null;
             $runner->save();
         }
@@ -219,6 +223,87 @@ class AuthController extends Controller
         }
 
         return $this->RespondWithToken($token, $user);
+    }
+
+    public function redirectToGoogle(Request $request)
+    {
+        $role = $request->query('role', 'user');
+
+        /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+        $driver = Socialite::driver('google');
+
+        $url = $driver->stateless()
+            ->with(['state' => 'role='.$role])
+            ->redirect()
+            ->getTargetUrl();
+
+        return $this->successResponse([
+            'url' => $url,
+        ], 'Google redirect URL generated successfully.');
+    }
+
+    public function handleGoogleCallback(Request $request)
+    {
+        try {
+            /** @var \Laravel\Socialite\Two\AbstractProvider $driver */
+            $driver = Socialite::driver('google');
+            $googleUser = $driver->stateless()->user();
+        } catch (\Exception $e) {
+            return $this->errorResponse('Unable to authenticate with Google.', 400);
+        }
+
+        $state = $request->input('state');
+        parse_str($state, $stateData);
+        $role = $stateData['role'] ?? 'user';
+
+        if (! in_array($role, ['user', 'runner'])) {
+            $role = 'user';
+        }
+
+        $user = User::where('google_id', $googleUser->id)->first();
+
+        if (! $user) {
+            $user = User::where('email', $googleUser->email)->first();
+
+            if ($user) {
+                // Link existing account to Google
+                $user->update([
+                    'google_id' => $googleUser->id,
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                ]);
+            } else {
+                // Register new user
+                $user = User::create([
+                    'name' => $googleUser->name,
+                    'email' => $googleUser->email,
+                    'google_id' => $googleUser->id,
+                    'password' => Hash::make(Str::random(24)),
+                    'role' => $role,
+                    'email_verified_at' => now(),
+                    'is_active' => true,
+                ]);
+
+                if ($role === 'runner') {
+                    $runner = new Runner;
+                    $runner->user_id = $user->id;
+                    $runner->type = 'registered';
+                    $runner->category = 'food_delivery'; // Default category
+                    $runner->save();
+                }
+            }
+        }
+
+        // Check if user is banned
+        if ($user->ban_expires_at && $user->ban_expires_at->isFuture()) {
+            return $this->errorResponse(
+                'Your account is banned until '.$user->ban_expires_at->toDateTimeString().'. Reason: '.$user->ban_reason,
+                403
+            );
+        }
+
+        $token = Auth::guard('api')->login($user);
+
+        return $this->RespondWithToken($token, $user, 'Logged in with Google successfully.');
     }
 
     public function logout()

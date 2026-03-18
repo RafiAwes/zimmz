@@ -56,6 +56,9 @@ Route::group(['controller' => AuthController::class, 'prefix' => 'auth'], functi
     Route::post('/login', 'login');
     Route::post('/logout', 'logout');
 
+    Route::get('/google', 'redirectToGoogle');
+    Route::get('/google/callback', 'handleGoogleCallback');
+
     // Protected routes — require JWT token (e.g. from OTP verification)
     Route::middleware('auth:api')->group(function () {
         Route::post('/reset-password', 'resetPassword');
@@ -134,7 +137,7 @@ Route::group(['controller' => TaskController::class, 'prefix' => 'task-service',
     Route::post('/complete/{id}', 'runnerCompleteTask');
     Route::post('/approve/{id}', 'approveTask');
     Route::post('/user/reject/{id}', 'rejectTask');
-}); 
+});
 
 Route::group(['controller' => MessageController::class, 'prefix' => 'messages', 'middleware' => 'auth:api'], function () {
     Route::post('send', 'sendMessage');
