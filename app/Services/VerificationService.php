@@ -17,7 +17,7 @@ class VerificationService
 
     private function generateOtp(): string
     {
-        return (string) random_int(100000, 999999);
+        return (string) random_int(1000, 9999);
     }
 
     public function sendOtp(User $user): JsonResponse
