@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\NgrokForceHttpsMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,7 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.admin' => \App\Http\Middleware\IsAdmin::class,
             'role.runner' => \App\Http\Middleware\IsRunner::class,
             'role.user' => \App\Http\Middleware\IsUser::class,
-        ]);
+        ])
+        ->append(NgrokForceHttpsMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

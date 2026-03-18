@@ -10,6 +10,7 @@ use App\Models\{Runner, User};
 use App\Services\VerificationService;
 use App\Traits\ApiResponseTraits;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
