@@ -1,9 +1,8 @@
 <?php
 
-use App\Http\Middleware\NgrokForceHttpsMiddleware;
 use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Configuration\{Exceptions, Middleware};
+use App\Http\Middleware\NgrokForceHttpsMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.admin' => \App\Http\Middleware\IsAdmin::class,
             'role.runner' => \App\Http\Middleware\IsRunner::class,
             'role.user' => \App\Http\Middleware\IsUser::class,
+            'zimmz.plus' => \App\Http\Middleware\RequireZimmzPlus::class,
         ])
         ->append(NgrokForceHttpsMiddleware::class);
     })

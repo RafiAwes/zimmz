@@ -185,4 +185,9 @@ class User extends Authenticatable implements JWTSubject
             'pending_tasks' => (clone $tasksQuery)->whereNotIn('status', ['completed', 'cancelled'])->count(),
         ];
     }
+
+    public function hasZimmzPlus(): bool
+    {
+        return $this->subscribed('default');
+    }
 }

@@ -1,25 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\AdController;
-use App\Http\Controllers\Api\adminController as AdminController;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CheckoutController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\FerryController;
-use App\Http\Controllers\Api\GeneralController;
-use App\Http\Controllers\Api\IslandController;
-use App\Http\Controllers\Api\MessageController;
-use App\Http\Controllers\Api\NotificationController;
-use App\Http\Controllers\Api\OrderController;
-use App\Http\Controllers\Api\ProfileController;
-use App\Http\Controllers\Api\RestaurantController;
-use App\Http\Controllers\Api\RunnerController;
-use App\Http\Controllers\Api\SubscriptionController;
-use App\Http\Controllers\Api\SupportMessageController;
-use App\Http\Controllers\Api\TaskController;
-use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\{AdController, AuthController, CheckoutController, DashboardController, FerryController, GeneralController, IslandController, MessageController, NotificationController, OrderController, ProfileController, RestaurantController, RunnerController, SubscriptionController, SupportMessageController, TaskController, UserController, adminController as AdminController, testController};
 
 Route::group(['controller' => CheckoutController::class, 'prefix' => 'checkout', 'middleware' => 'auth:api'], function () {
     Route::post('/create-payment-intent', 'createPaymentIntent');
@@ -182,6 +165,7 @@ Route::group(['controller' => AdminController::class, 'prefix' => 'admin', 'midd
 Route::group(['controller' => SubscriptionController::class, 'prefix' => 'subscription', 'middleware' => 'auth:api'], function () {
     Route::get('/plan', 'plan');
     Route::post('/subscribe', 'subscribe');
+    Route::post('/finalize', 'finalize');
     Route::get('/status', 'status');
     Route::get('/billing-portal', 'billingPortal');
     Route::post('/cancel', 'cancel');
@@ -189,10 +173,18 @@ Route::group(['controller' => SubscriptionController::class, 'prefix' => 'subscr
     Route::get('/invoices', 'invoices');
     Route::get('/upcoming-invoice', 'upcomingInvoice');
     Route::get('/invoice/{invoiceId}/download', 'downloadInvoice');
+    
 });
 
 Route::group(['controller' => DashboardController::class, 'prefix' => 'dashboard', 'middleware' => ['auth:api', 'role.admin']], function () {
     Route::get('/overview', 'overview');
     Route::get('/registration-statistics', 'registrationStatistics');
     Route::get('/task-service-statistics', 'taskServiceStatistics');
+});
+
+
+// Test routes for development/debugging purposes
+Route::group(['controller' => testController::class, 'prefix' => 'test', 'middleware' => 'auth:api'], function () {
+    Route::get('/', 'index');
+    Route::get('/zimmz-plus', 'zimmzPlusTest')->middleware('zimmz.plus');
 });

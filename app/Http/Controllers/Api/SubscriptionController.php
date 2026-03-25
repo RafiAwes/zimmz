@@ -2,22 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Subscription\CancelSubscriptionRequest;
-use App\Http\Requests\Api\Subscription\CreateSubscriptionCheckoutRequest;
-use App\Models\Notification;
-use App\Models\User;
-use App\Traits\ApiResponseTraits;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Http\{JsonResponse, Request};
 use Illuminate\Support\Facades\Auth;
-use Laravel\Cashier\Cashier;
-use Laravel\Cashier\Invoice;
-use Laravel\Cashier\Subscription as CashierSubscription;
+use Laravel\Cashier\{Cashier, Invoice, Subscription as CashierSubscription};
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\Subscription\{CancelSubscriptionRequest, CreateSubscriptionCheckoutRequest};
+use App\Models\{Notification, User};
+use App\Traits\ApiResponseTraits;
 use RuntimeException;
+use Throwable;
+use Carbon\Carbon;
 use Stripe\Price;
 use Symfony\Component\HttpFoundation\Response;
-use Throwable;
 
 class SubscriptionController extends Controller
 {
@@ -519,5 +515,81 @@ class SubscriptionController extends Controller
         }
 
         return $user;
+    }
+
+    /**
+     * Finalize a Stripe Checkout session and create local subscription records.
+     */
+    public function finalize(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string',
+        ]);
+
+        $user = $this->authenticatedUser();
+
+        try {
+            $sessionId = $request->input('session_id');
+
+            $stripe = Cashier::stripe();
+            $session = $stripe->checkout->sessions->retrieve($sessionId);
+
+            $subscriptionId = $session->subscription ?? null;
+            $customerId = $session->customer ?? null;
+            $clientRef = $session->client_reference_id ?? ($session->metadata->user_id ?? null);
+
+            // Link Stripe customer to user if present and missing locally
+            if ($customerId && ! $user->stripe_id) {
+                $user->forceFill(['stripe_id' => $customerId])->save();
+            }
+
+            if (! $subscriptionId) {
+                return $this->errorResponse('No subscription id found on the provided session.', 422);
+            }
+
+            // Avoid duplicating an existing local subscription
+            if ($user->subscription(self::SUBSCRIPTION_TYPE)?->stripe_id === $subscriptionId) {
+                return $this->successResponse($this->subscriptionSnapshot($user->subscription(self::SUBSCRIPTION_TYPE)), 'Subscription already synced.');
+            }
+
+            $sub = $stripe->subscriptions->retrieve($subscriptionId, [
+                'expand' => ['items.data.price'],
+            ]);
+
+            $priceId = $sub->items->data[0]->price->id ?? null;
+            $productId = $sub->items->data[0]->price->product ?? null;
+
+            $local = $user->subscriptions()->create([
+                'type' => self::SUBSCRIPTION_TYPE,
+                'stripe_id' => $sub->id,
+                'stripe_status' => $sub->status,
+                'stripe_price' => $priceId,
+                'quantity' => $sub->quantity ?? 1,
+                'trial_ends_at' => isset($sub->trial_end) ? Carbon::createFromTimestamp($sub->trial_end) : null,
+                'ends_at' => isset($sub->cancel_at) ? Carbon::createFromTimestamp($sub->cancel_at) : null,
+            ]);
+
+            // Create subscription item record if available
+            if ($priceId) {
+                $local->items()->create([
+                    'stripe_id' => $sub->items->data[0]->id ?? ($sub->id.'-item'),
+                    'stripe_product' => is_object($productId) ? $productId->id : $productId,
+                    'stripe_price' => $priceId,
+                    'quantity' => $sub->items->data[0]->quantity ?? 1,
+                ]);
+            }
+
+            $this->createSubscriptionNotification(
+                $user,
+                'Zimmz Plus Activated',
+                'Your Zimmz Plus subscription was synced successfully.',
+                'subscription_created',
+                $local->id
+            );
+
+            return $this->successResponse($this->subscriptionSnapshot($local), 'Subscription synced successfully.');
+        } catch (Throwable $throwable) {
+            return $this->errorResponse('Unable to finalize subscription session: '.$throwable->getMessage(), 422);
+        }
     }
 }
