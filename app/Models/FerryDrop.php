@@ -12,6 +12,8 @@ class FerryDrop extends Model
     protected $fillable = [
         'order_id',
         'pickup_location',
+        'pickup_lat',
+        'pickup_long',
         'ferry_id',
         'island_id',
         'drop_fee',

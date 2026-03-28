@@ -69,6 +69,11 @@ return [
             'connection' => 'default',
         ],
 
+        'http' => [
+            'driver' => 'http',
+            'endpoint' => env('HTTP_BROADCAST_URL'),
+        ],
+
         'ably' => [
             'driver' => 'ably',
             'key' => env('ABLY_KEY'),

@@ -28,6 +28,8 @@ class UpdateOrderRequest extends FormRequest
             // Location fields
             'lat' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
             'long' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
+            'pickup_lat' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
+            'pickup_long' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
             // Typically type shouldn't change for an existing order,
             // but we'll allow updating child fields if needed.
 
@@ -43,6 +45,8 @@ class UpdateOrderRequest extends FormRequest
 
             // Ferry Drop fields
             'pickup_location' => 'nullable|string',
+            'pickup_lat' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
+            'pickup_long' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
             'drop_fee' => 'nullable|numeric',
             'package_fee' => 'nullable|numeric',
         ];

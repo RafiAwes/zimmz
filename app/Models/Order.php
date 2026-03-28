@@ -26,6 +26,8 @@ class Order extends Model
         'files',
         'lat',
         'long',
+        'pickup_lat',
+        'pickup_long',
     ];
 
     protected function casts(): array

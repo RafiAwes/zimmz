@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\MessageSent;
-use App\Http\Controllers\Controller; // Don't forget to import your Event!
+use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Traits\ApiResponseTraits;
 use Illuminate\Http\Request;
@@ -57,7 +57,7 @@ class MessageController extends Controller
             $q->where('sender_id', $userId)
                 ->where('receiver_id', $myId);
         })
-            ->orderBy('created_at', 'asc') // Oldest first for chat UI
+            ->orderBy('created_at', 'asc') // Newest first for chat UI
             ->get();
 
         return $this->successResponse($messages, 'Conversation retrieved.', 200);

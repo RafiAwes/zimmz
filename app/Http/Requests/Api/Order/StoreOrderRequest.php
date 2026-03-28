@@ -31,6 +31,10 @@ class StoreOrderRequest extends FormRequest
             'drop_location' => 'required|string',
             'type' => 'required|in:food_delivery,ferry_drops',
 
+            // Optional order-level pickup coordinates
+            'pickup_lat' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
+            'pickup_long' => 'nullable|string|regex:/^-?\d+(\.\d+)?$/',
+
             // Food Delivery fields
             'restaurant_id' => 'required_if:type,food_delivery|exists:restaurants,id',
             'food_cost' => 'required_if:type,food_delivery|numeric',
@@ -44,6 +48,8 @@ class StoreOrderRequest extends FormRequest
 
             // Ferry Drop fields
             'pickup_location' => 'required_if:type,ferry_drops|string',
+            'pickup_lat' => 'required_if:type,ferry_drops|string|regex:/^-?\d+(\.\d+)?$/',
+            'pickup_long' => 'required_if:type,ferry_drops|string|regex:/^-?\d+(\.\d+)?$/',
             'ferry_id' => 'required_if:type,ferry_drops|exists:ferries,id',
             'island_id' => 'required_if:type,ferry_drops|exists:islands,id',
             'drop_fee' => 'required_if:type,ferry_drops|numeric',

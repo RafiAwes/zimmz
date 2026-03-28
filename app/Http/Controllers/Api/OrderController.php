@@ -119,6 +119,8 @@ class OrderController extends Controller
                 'type' => $request->type,
                 'lat' => $locationData['lat'],
                 'long' => $locationData['long'],
+                'pickup_lat' => $request->pickup_lat ?? null,
+                'pickup_long' => $request->pickup_long ?? null,
                 'files' => $this->handleFileUploads($request),
             ]);
 
@@ -137,6 +139,8 @@ class OrderController extends Controller
                 FerryDrop::create([
                     'order_id' => $order->id,
                     'pickup_location' => $request->pickup_location,
+                    'pickup_lat' => $request->pickup_lat ?? null,
+                    'pickup_long' => $request->pickup_long ?? null,
                     'ferry_id' => $request->ferry_id,
                     'island_id' => $request->island_id,
                     'drop_fee' => $request->drop_fee,
@@ -192,6 +196,7 @@ class OrderController extends Controller
                     'drop_location',
                 ]),
                 $locationData,
+                $request->only(['pickup_lat', 'pickup_long']),
             );
 
             $order->update($orderData);
@@ -214,6 +219,8 @@ class OrderController extends Controller
             } elseif ($order->type === 'ferry_drops') {
                 $order->ferryDrop()->update($request->only([
                     'pickup_location',
+                    'pickup_lat',
+                    'pickup_long',
                     'drop_fee',
                     'package_fee',
                 ]));
