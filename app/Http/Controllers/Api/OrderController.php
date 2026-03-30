@@ -119,8 +119,6 @@ class OrderController extends Controller
                 'type' => $request->type,
                 'lat' => $locationData['lat'],
                 'long' => $locationData['long'],
-                'pickup_lat' => $request->pickup_lat ?? null,
-                'pickup_long' => $request->pickup_long ?? null,
                 'files' => $this->handleFileUploads($request),
             ]);
 
@@ -168,7 +166,15 @@ class OrderController extends Controller
     public function details(Request $request, $id): JsonResponse
     {
         $viewer = Auth::guard('api')->user();
-        $order = Order::with(['user', 'foodDelivery', 'ferryDrop'])->findOrFail($id);
+        $order = Order::with(['user', 'foodDelivery.restaurant', 'ferryDrop.island', 'ferryDrop.ferry'])->findOrFail($id);
+
+        if ($order->foodDelivery) {
+            $order->foodDelivery->unsetRelation('restaurant');
+        }
+
+        if ($order->ferryDrop) {
+            $order->ferryDrop->unsetRelation('island');
+        }
 
         return $this->successResponse(
             $this->exposeStatusForRole($order, $viewer?->role),
