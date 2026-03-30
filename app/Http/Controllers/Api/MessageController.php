@@ -50,7 +50,7 @@ class MessageController extends Controller
 
         // Robust Logic: Fetch messages where (Sender is ME and Receiver is YOU)
         // OR (Sender is YOU and Receiver is ME)
-        $messages = Message::where(function ($q) use ($myId, $userId) {
+        $messages = Message::with('sender:id,name,avatar', 'receiver:id,name,avatar')->where(function ($q) use ($myId, $userId) {
             $q->where('sender_id', $myId)
                 ->where('receiver_id', $userId);
         })->orWhere(function ($q) use ($myId, $userId) {

@@ -2,20 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\CheckoutController;
+use Illuminate\Http\{JsonResponse, Request};
+use Illuminate\Support\Facades\{Auth, DB};
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Order\StoreOrderRequest;
-use App\Http\Requests\Api\Order\UpdateOrderRequest;
-use App\Models\FerryDrop;
-use App\Models\FoodDelivery;
-use App\Models\Order;
-use App\Traits\ApiResponseTraits;
-use App\Traits\LocationTrait;
-use App\Traits\NotificationTrait;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Http\Requests\Api\Order\{StoreOrderRequest, UpdateOrderRequest};
+use App\Models\{FerryDrop, FoodDelivery, Order};
+use App\Traits\{ApiResponseTraits, LocationTrait, NotificationTrait};
 
 class OrderController extends Controller
 {
@@ -119,6 +111,8 @@ class OrderController extends Controller
                 'type' => $request->type,
                 'lat' => $locationData['lat'],
                 'long' => $locationData['long'],
+                'pickup_lat' => $request->pickup_lat ?? null,
+                'pickup_long' => $request->pickup_long ?? null,
                 'files' => $this->handleFileUploads($request),
             ]);
 
